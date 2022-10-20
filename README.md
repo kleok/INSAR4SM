@@ -29,7 +29,7 @@ export PATH=${PATH}:${InSAR4SM_HOME}
 ```
 
 ## 2. Running InSAR4SM
-[InSAR4SM_app.py](https://github.com/kleok/INSAR4SM/blob/main/InSAR4SM_app.py)
+[InSAR4SM_app.py](https://github.com/kleok/INSAR4SM/blob/main/INSAR4SM_app.py)
 
 InSAR4SM provide soil moisture estimations using interferometric observables and meteorological data using a 5-step framework. 
 - Identification of driest SAR image based on meteorological information.
@@ -38,7 +38,7 @@ InSAR4SM provide soil moisture estimations using interferometric observables and
 - Calculation of coherence information due to soil moisture variations.
 - Soil moisture inversion using De Zan`s model.
 
-In order to run InSAR4SM please make sure to update/provide the following information located at "Input arguments" cell at [InSAR4SM_app.py](https://github.com/kleok/INSAR4SM/blob/main/InSAR4SM_app.py)
+In order to run InSAR4SM please make sure to update/provide the following information located at "Input arguments" cell at [InSAR4SM_app.py](https://github.com/kleok/INSAR4SM/blob/main/INSAR4SM_app.py)
 
 ```
 # the name of your project
