@@ -1,0 +1,22 @@
+name: insar4sm
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python==3.9.12
+  - pandas==1.4.2
+  - geopandas==0.10.2
+  - numpy==1.22.3
+  - netCDF4==1.5.8
+  - tqdm==4.64.0
+  - requests==2.27.1
+  - shapely==1.8.2
+  - joblib==1.1.0
+  - libopenblas==0.3.21
+  - matplotlib==3.5.2
+  - pyproj==3.3.1
+  - rasterio==1.2.10
+  - scikit-learn = 1.0.2
+  - gdal==3.4.2
+  - glib==2.72.1
+  - scipy==1.8.0
