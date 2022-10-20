@@ -96,7 +96,7 @@ stack.get_dry_SARs()
 stack.calc_insar_stack()
 
 #%%###########################################################################
-#-------     Step C: SM Estimation        -------#
+#-------     Step B: SM Estimation        -------#
 ##############################################################################
 stack.sm_points = ISMN_point
 stack.sm_polygons = IMSN_polygon
@@ -118,7 +118,10 @@ sm_point_ts.calc_sm_index()
 sm_point_ts.inversion()
 
 
-#----------- plotting
+
+#%%###########################################################################
+#-------     Step C: Plotting        -------#
+##############################################################################
 
 #-- Plotting raw coherence
 
@@ -132,7 +135,6 @@ plt.title('Driest Date: {}'.format(sm_point_ts.driest_date))
 plt.savefig('{}/Raw_coh_{}_sq{}.png'.format(stack.export_dir, station_name, sq_size), dpi=200)
 plt.close()
 
-
 #-- Plotting sm coherence
 
 fig, ax = plt.subplots(1,1, figsize=(15, 15))
@@ -143,20 +145,9 @@ ax.set_yticklabels(y_label_list)
 fig.colorbar(img)
 plt.savefig('{}/SM_coh_{}_sq{}.png'.format(stack.export_dir, station_name, sq_size), dpi=200)
 plt.close()
-
-
-
-# column_dates = [slc_date.strftime("D%Y%m%d") for slc_date in stack.slc_datetimes]
-# sm_estimations_df = pd.DataFrame(np.expand_dims(sm_point_ts.sm_inverted,axis=0),
-#                                  index = range(stack.n_sm_points),
-#                                  columns = column_dates)
-    
-# sm_estimations_df['geometry'] = stack.sm_points.values
-# sm_estimations_gdg = gpd.GeoDataFrame(sm_estimations_df, geometry='geometry')
-# sm_estimations_gdg.to_file('{}/sm_inversions.shp'.format(export_dir))
     
 #%%###########################################################################
-#-------     Step E: Comparison        -------#
+#-------     Step D: Comparison        -------#
 ##############################################################################
 
 IMSN_df = pd.read_csv(ISMN_csv)
@@ -204,14 +195,3 @@ plt.axis('off')
 
 plt.savefig('{}/Ordering_{}_sq{}.png'.format(stack.export_dir, station_name, sq_size), dpi=200)
 plt.close()
-
-# del sm_point_ts, stack
-
-########## ploting
-
-# plt.rcParams.update({'font.size': 22}) # must set in top
-# plot_columns = ['sm_plot', 'insar4sm']
-# ax1 = comparison_df.plot(y=plot_columns,figsize=(10,6), linewidth=2, style='.-', legend=True, fontsize=16)
-# ax1.legend(loc=2,fontsize=20)
-# ax1.set_ylabel('Soil moisture (m3/m3)',fontdict={'fontsize':24})
-# plt.savefig('{}/SM_estimations_{}_sq{}_new.svg'.format(stack.export_dir, station_name, sq_size), format="svg")
