@@ -43,6 +43,7 @@ def test_insar4sm():
         dict_validation_data = FordDryLake_SM_validation_data.__dict__
     
     for key in dict_validation_data.keys():
+        print(key)
         if type(dict_validation_data[key])!=np.ndarray:
             assert np.all(dict_data[key]==dict_validation_data[key])
         else:
