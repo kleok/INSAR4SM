@@ -20,6 +20,8 @@ First you have to download InSAR4SM using the following command
 
 InSAR4SM is written in Python3 and relies on several Python modules. You can install them by using ```INSAR4SM_env.yml``` file.
 
+```conda env create -f INSAR4SM_env.yml```
+
 ### 1.3 Set environmental variables
 on GNU/Linux, append to .bashrc file:
 ```
