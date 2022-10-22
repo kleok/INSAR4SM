@@ -44,6 +44,10 @@ def test_insar4sm():
     
     for key in dict_validation_data.keys():
         print(key)
+        print(dict_data[key],type(dict_data[key]))
+        print('-----')
+        print(dict_validation_data[key],type(dict_validation_data[key]))
+        print('-+-+-+-+-')
         if type(dict_validation_data[key])!=np.ndarray:
             assert np.all(dict_data[key]==dict_validation_data[key])
         else:
