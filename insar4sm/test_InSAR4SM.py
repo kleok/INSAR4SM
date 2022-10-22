@@ -44,12 +44,7 @@ def test_insar4sm():
     
     for key in dict_validation_data.keys():
         print(key)
-        try:
-            if type(dict_validation_data[key])!=np.ndarray:
-                assert np.all(dict_data[key]==dict_validation_data[key])
-            else:
-                assert array_nan_close(dict_data[key], dict_validation_data[key])
-        except:
-            print(dict_data[key],type(dict_data[key]))
-            print('---------------------------------')
-            print(dict_validation_data[key],type(dict_validation_data[key]))
+        if type(dict_validation_data[key])!=np.ndarray:
+            assert np.all(dict_data[key]==dict_validation_data[key])
+        else:
+            assert array_nan_close(dict_data[key], dict_validation_data[key])
