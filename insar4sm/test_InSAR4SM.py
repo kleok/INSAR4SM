@@ -49,8 +49,9 @@ def test_insar4sm():
         print(dict_validation_data[key],type(dict_validation_data[key]))
         print('-+-+-+-+-')
         if type(dict_validation_data[key])!=np.ndarray:
-            assert np.all(dict_data[key]==dict_validation_data[key])
-        elif type(dict_validation_data[key])==np.float64:
-            assert np.round(dict_data[key],4)==np.round(dict_validation_data[key],4)
+            if type(dict_validation_data[key])==np.float64:
+                assert np.round(dict_data[key],4)==np.round(dict_validation_data[key],4)
+            else:
+                assert np.all(dict_data[key]==dict_validation_data[key])            
         else:
             assert array_nan_close(dict_data[key], dict_validation_data[key])
