@@ -2,7 +2,7 @@
 
 ## Introduction
 
-InSAR4SM is a free and open-source software for estimating soil moisture using interferometric observables. It requires as inputs a) a Topstack ISCE SLC stack and b) a meteorological dataset (e.g. ERA5-Land data). The main output result is a point vector file that contains soil moisture information over time.
+InSAR4SM is a free and open-source software for estimating soil moisture using interferometric observables. It requires as inputs a) a Topstack [ISCE](https://github.com/isce-framework/isce2) SLC stack and b) a meteorological dataset (e.g. [ERA5-Land](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land?tab=overview) data). The main output result is a point vector file that contains soil moisture information over time.
 
 This is research code provided to you "as is" with NO WARRANTIES OF CORRECTNESS. Use at your own risk.
 
