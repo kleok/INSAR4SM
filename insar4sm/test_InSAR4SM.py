@@ -10,7 +10,7 @@ with warnings.catch_warnings():
     
 def array_nan_close(a:np.array, b:np.array)->bool:
     m = np.isfinite(a) & np.isfinite(b)
-    return np.allclose(a[m], b[m])
+    return np.allclose(np.abs(a[m]), np.abs(b[m]))
 
 def test_insar4sm():
     # get the value of the environment variable $insar4sm_HOME
