@@ -29,14 +29,15 @@ from insar4sm.classes import INSAR4SM_stack, SM_point
 # The ISMN station
 # station_name = 'FordDryLake'
 station_name = 'DesertCenter'
-orbit_time = '14:00:00'
+orbit_time = '02:00:00'
 
 #orbit_nums = ['100','173']
 #orbit_nums = ['100']
 #sq_sizes = [50,100,200,250,300,400,500]
 
 # orbit_num = '100'
-orbit_num = '173'
+#orbit_num = '173'
+orbit_num = '166'
 sq_size = 250
 
 ###############################################################################
@@ -108,7 +109,8 @@ sm_point_ts.calc_covar_matrix()
 sm_point_ts.get_DS_geometry(stack)
 
 sm_point_ts.calc_driest_date()
-sm_point_ts.driest_date = pd.to_datetime('20180704')
+#sm_point_ts.driest_date = pd.to_datetime('20180704')
+sm_point_ts.driest_date = pd.to_datetime('20180710')
 sm_point_ts.calc_sm_sorting()
 
 # in_situ_data = pd.read_csv('/RSL02/SM_NA/comparison_FordDryLake.csv')
