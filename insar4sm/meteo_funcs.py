@@ -6,8 +6,10 @@ import numpy as np
 
 def find_dry_SARs(meteo_df:pd.DataFrame, slc_datetimes:list, days_back:int = 24, orbit_time:str='02:00:00')->tuple[str,list,pd.DataFrame]:
     """Finds SAR images that are related to low precipitation activity (low SSM conditions) and not low temperature (snow-free).
+
     TODO:
         Make sure that daily and hourly meteo_df works well with this functionality.
+        
     Args:
         meteo_df (pd.DataFrame): Contains meteorological data at daily basis. We have three columns (tp__m, skt__K, Datetimes)
         slc_datetimes (list): list of (datetime.datetime objects) SAR acquisition datetimes

@@ -125,7 +125,7 @@ def inversion(SM0:np.array,
         
         results = minimize(objective_function,
                            SM0,
-                           options={'ftol':10e-1,'eps':0.05, 'maxiter':100},
+                           options={'ftol':10e-1,'eps':0.05, 'maxiter':500},
                            #method='trust-constr',
                            method=opt_method,
                            bounds = bounds,
