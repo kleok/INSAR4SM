@@ -162,7 +162,6 @@ class SM_point:
         self.dry_dates = insar4sm_stack.dry_dates
         
         # processing parms
-        
         self.amp_sel = True
         self.ph_keep_percent = 1
         self.save = False
@@ -202,8 +201,7 @@ class SM_point:
         self.n_ds = 1
         self.DS_ind = 0
    
-        # datasets for SM_point
-        
+        # intialize datasets for SM_point
         self.bp_DS = np.zeros((self.n_ds, self.n_ifg), dtype=np.float64)
         self.inc_DS = np.zeros((self.n_ds), dtype=np.float64)
         self.ph_DS = np.zeros((self.n_ds,self.n_ifg,self.n_ifg), dtype=np.complex128)
@@ -217,7 +215,8 @@ class SM_point:
         
         
     def get_DS_info(self, insar4sm_stack:INSAR4SM_stack):
-        """Extracts the SLC SAR pixels that will be used for constructing distributed scatterer (DS). Extracts the inteferometric phase and amplitude of DS.
+        """Extracts the SLC SAR pixels that will be used for constructing distributed scatterer (DS).
+         Extracts the inteferometric phase and amplitude of DS.
 
         Args:
             insar4sm_stack (INSAR4SM_stack): Object with data and attributes of InSAR4SM stack
@@ -244,7 +243,6 @@ class SM_point:
         # 3. For all combinations of amplitude similar pixels, calculate the 
         # DS coherence in order to find the ones that yield the highest 
         # temporal coherence.
-        
         self.Best_pixels_ph = find_best_pixels_ph(self.DS_coords_1,
                                                   self.DS_coords_2,
                                                   self.DS_slc_values,
