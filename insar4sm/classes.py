@@ -176,7 +176,7 @@ class SM_point:
         # inversion parms
         self.opt_method = 'SLSQP' # or 'trust-constr'
         self.ph_closure_dist = 6 # distance between sar acquisitions
-        self.sm_dry_state = 3  # in m3/m3
+        self.sm_dry_state = 2.8  # in m3/m3
         self.freq_GHz = 5.405
         
         # read soil data

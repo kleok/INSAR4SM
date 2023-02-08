@@ -125,8 +125,10 @@ def inversion(SM0:np.array,
         
         results = minimize(objective_function,
                            SM0,
-                           options={'ftol':10e-1,'eps':0.05, 'maxiter':500},
-                           #method='trust-constr',
+                           options={'ftol':5e-2,'eps':0.03, 'maxiter':100}, #v4
+                           #options={'ftol':10e-1,'eps':0.03, 'maxiter':100}, #this is ok for spatial resolution evaluation v3
+                           #options={'maxiter':25}, v2
+                           #options={'ftol':10e-1,'eps':0.05, 'maxiter':100}, #this is ok for spatial resolution evaluation v1
                            method=opt_method,
                            bounds = bounds,
                            constraints = cons)
