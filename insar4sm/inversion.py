@@ -24,6 +24,7 @@ def rewrap(data:np.array)-> np.array:
 def inversion(SM0:np.array,
               DS_mean_inc_angle:float,
               opt_method:str,
+              opt_parms:dict,
               Phase_closures:np.array,
               Mask_ph_closure:np.array,
               SM_coh:np.array,
@@ -120,15 +121,19 @@ def inversion(SM0:np.array,
 
     cons = tuple(cons_list)
     
+    
     # minimization
     try:
         
         results = minimize(objective_function,
                            SM0,
-                           options={'ftol':5e-2,'eps':0.03, 'maxiter':100}, #v4
+                           options={'ftol':opt_parms['ftol'],'eps':opt_parms['eps'], 'maxiter':opt_parms['maxiter']}, # v7
+                           #options={'ftol':10e-1,'eps':0.01, 'maxiter':100}, # orbits 100, 166 are good fro 250m, orbit 173 not good enough for 250m v6
+                           #options={'ftol':10e-1,'eps':0.03, 'maxiter':25}, #  v5
+                           #options={'ftol':5e-2,'eps':0.03, 'maxiter':100}, # high discrepances at R and RSME v4
                            #options={'ftol':10e-1,'eps':0.03, 'maxiter':100}, #this is ok for spatial resolution evaluation v3
-                           #options={'maxiter':25}, v2
-                           #options={'ftol':10e-1,'eps':0.05, 'maxiter':100}, #this is ok for spatial resolution evaluation v1
+                           #options={'maxiter':25}, the combination that generated ISMN validation figures
+                           #options={'ftol':10e-1,'eps':0.05, 'maxiter':100}, # v1
                            method=opt_method,
                            bounds = bounds,
                            constraints = cons)
@@ -152,6 +157,7 @@ def invert_sm(ph_DS:np.array,
               band_end:int,
               nbands:int,
               opt_method:str,
+              opt_parms:dict,
               ph_closure_dist:int = 15,
               sm_dry_state:float = 3.0,
               freq_GHz:float = 5.405,
@@ -225,6 +231,7 @@ def invert_sm(ph_DS:np.array,
     SM_results = inversion(SM0 = SM_index,
                            DS_mean_inc_angle = DS_mean_inc_angle,
                            opt_method = opt_method,
+                           opt_parms = opt_parms,
                            Phase_closures = Phase_closures,
                            Mask_ph_closure = Mask_ph_closure,
                            SM_coh = SM_coh,
