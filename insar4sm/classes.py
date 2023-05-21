@@ -172,7 +172,7 @@ class SM_point:
         self.rg_size = 1
 
         # coherence processing parms
-        self.n_iters = 100
+        self.n_iters = 500
         self.coh_denoise = False
         self.max_coh_flag = True
         self.simple_exp_model = False
@@ -187,6 +187,7 @@ class SM_point:
 
         self.opt_method = 'SLSQP' # or 'trust-constr'
         self.ph_closure_dist = 6 # distance between sar acquisitions
+        self.weight_factor = 1 # the weighting factor of coherence cost
         self.sm_dry_state = 2.8  # in m3/m3
         self.freq_GHz = 5.405
         
@@ -472,6 +473,7 @@ class SM_point:
                                      self.opt_method,
                                      self.opt_parms,
                                      self.ph_closure_dist,
+                                     self.weight_factor,
                                      self.sm_dry_state,
                                      self.freq_GHz,
                                      self.clay_pct,

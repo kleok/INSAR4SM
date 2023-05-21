@@ -55,6 +55,9 @@ def get_SAR_borders(merged_dir:str, AOI_WGS84:str)->tuple[int,int,int,int]:
     latFile = os.path.join(merged_dir, "geom_master", "lat.rdr.full.vrt")
     lonFile = os.path.join(merged_dir, "geom_master", "lon.rdr.full.vrt")
     
+    # latFile = os.path.join(merged_dir, "geom_reference", "lat.rdr.full.vrt")
+    # lonFile = os.path.join(merged_dir, "geom_reference", "lon.rdr.full.vrt")
+    
     lat_data = gdal.Open(latFile).ReadAsArray()
     lon_data = gdal.Open(lonFile).ReadAsArray()
     
@@ -62,7 +65,7 @@ def get_SAR_borders(merged_dir:str, AOI_WGS84:str)->tuple[int,int,int,int]:
     
     if type(polygon_WGS84) == shapely.geometry.multipolygon.MultiPolygon:
         polygon_WGS84 = list(polygon_WGS84)[0]
-        
+  
     assert type(polygon_WGS84) == shapely.geometry.polygon.Polygon
     
     lons, lats = polygon_WGS84.exterior.coords.xy
@@ -287,6 +290,7 @@ def tops_2_vrt(indir:str, outdir:str, stackdir:str, AOI_WGS84:str, geomdir:str)-
                                        width = width,
                                        height = height,
                                        PATH = os.path.abspath( os.path.join(indir, 'geom_master', val+'.rdr.full.vrt')),
+                                    #    PATH = os.path.abspath( os.path.join(indir, 'geom_reference', val+'.rdr.full.vrt')),
                                        linewidth = width * 8))
 
     baseline_grids = glob.glob(os.path.join(indir,"baselines","2*","2*[0-9].full.vrt"))
