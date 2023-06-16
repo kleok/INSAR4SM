@@ -13,17 +13,19 @@ import matplotlib.pyplot as plt
 from insar4sm.classes import INSAR4SM_stack, SM_point
 from insar4sm.joblib_progress_bar import tqdm_joblib
 
-def sm_estimation(stack:INSAR4SM_stack, sm_ind:int)->np.array:
+def sm_estimation(stack:INSAR4SM_stack, sm_ind:int, DS_flag: bool = True)->np.array:
     """Estimates soil moisture using insar4sm functionalities
 
     Args:
         stack (INSAR4SM_stack): the object of the INSAR4SM_stack class
         sm_ind (int): index of soil moisture estimation point
+        DS_flag (bool): flag that determines if distributed scatterers will be computed.
 
     Returns:
         np.array: soil moisture estimations from inversion
     """
     sm_point_ts = SM_point(stack, sm_ind)
+    sm_point_ts.amp_sel = DS_flag
     sm_point_ts.get_DS_info(stack)
     sm_point_ts.calc_covar_matrix()
     if sm_point_ts.non_coverage or np.all(sm_point_ts.amp_DS==0):
@@ -43,16 +45,16 @@ def sm_estimation(stack:INSAR4SM_stack, sm_ind:int)->np.array:
 #############################################################################
 
 # the name of your project
-projectname = 'INSAR4SM_estimations_newtest1'
+projectname = 'My_first_INSAR4SM_app'
 
 # the directory of the topstack processing stack
-topstackDir = '/RSL02/SM_Arabia/Topstack_processing'
+topstackDir = '/RSL02/SM_Arabia/Topstack_processing_2023/'
 
 # time of Sentinel-1 pass.
 orbit_time = '15:00:00'
 
 # the AOI geojson file, ensure that AOI is inside your topstack stack
-AOI = '/RSL02/SM_Arabia/aoi/aoi_test.geojson'
+AOI = '/RSL02/SM_Arabia/aoi/arabia_burgi_2023.geojson'
 
 # spatial resolution of soil moisture grid in meters
 grid_size = 250
