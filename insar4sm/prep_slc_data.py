@@ -52,11 +52,13 @@ def get_SAR_borders(merged_dir:str, AOI_WGS84:str)->tuple[int,int,int,int]:
     Returns:
         tuple[int,int,int,int]: ymin, ymax, xmin, xmax coordinates related with Topstack datasets
     """
-    latFile = os.path.join(merged_dir, "geom_master", "lat.rdr.full.vrt")
-    lonFile = os.path.join(merged_dir, "geom_master", "lon.rdr.full.vrt")
-    
-    # latFile = os.path.join(merged_dir, "geom_reference", "lat.rdr.full.vrt")
-    # lonFile = os.path.join(merged_dir, "geom_reference", "lon.rdr.full.vrt")
+    # # In older ISCE versions the name of the geometry folder was geom_master
+    # latFile = os.path.join(merged_dir, "geom_master", "lat.rdr.full.vrt")
+    # lonFile = os.path.join(merged_dir, "geom_master", "lon.rdr.full.vrt")
+
+    # In recent ISCE versions the name of the geometry folder is geom_reference
+    latFile = os.path.join(merged_dir, "geom_reference", "lat.rdr.full.vrt")
+    lonFile = os.path.join(merged_dir, "geom_reference", "lon.rdr.full.vrt")
     
     lat_data = gdal.Open(latFile).ReadAsArray()
     lon_data = gdal.Open(lonFile).ReadAsArray()
@@ -289,8 +291,13 @@ def tops_2_vrt(indir:str, outdir:str, stackdir:str, AOI_WGS84:str, geomdir:str)-
                                        xmin = xmin, ymin = ymin,
                                        width = width,
                                        height = height,
-                                       PATH = os.path.abspath( os.path.join(indir, 'geom_master', val+'.rdr.full.vrt')),
-                                    #    PATH = os.path.abspath( os.path.join(indir, 'geom_reference', val+'.rdr.full.vrt')),
+
+                                    # # In older ISCE versions the name of the geometry folder was geom_master
+                                    #    PATH = os.path.abspath( os.path.join(indir, 'geom_master', val+'.rdr.full.vrt')),
+
+                                    # In recent ISCE versions the name of the geometry folder is geom_reference
+                                       PATH = os.path.abspath( os.path.join(indir, 'geom_reference', val+'.rdr.full.vrt')),
+                                       
                                        linewidth = width * 8))
 
     baseline_grids = glob.glob(os.path.join(indir,"baselines","2*","2*[0-9].full.vrt"))
