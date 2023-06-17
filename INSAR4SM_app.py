@@ -50,6 +50,9 @@ def sm_estimation(stack:INSAR4SM_stack, sm_ind:int, DS_flag: bool = True)->np.ar
 # the name of your project
 projectname = 'My_first_INSAR4SM_app'
 
+# number of CPUs to be used
+n_CPUs = 6
+
 # the output directory 
 export_dir = '/RSL02/SM_Arabia/{}'.format(projectname)
 
@@ -110,6 +113,7 @@ ERA5_sm_flag = True
                                                                                                                                                                                                                                                                                                                                                                                                                                                     
 stack = INSAR4SM_stack(topstackDir = topstackDir,
                        projectname = projectname,
+                       n_CPUs = n_CPUs,
                        AOI = AOI,
                        meteo_file = meteo_file,
                        ERA5_flag = ERA5_flag,
