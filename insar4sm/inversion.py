@@ -129,13 +129,7 @@ def inversion(SM0:np.array,
         
         results = minimize(objective_function,
                            SM0,
-                           options={'ftol':opt_parms['ftol'],'eps':opt_parms['eps'], 'maxiter':opt_parms['maxiter']}, # v7
-                           #options={'ftol':10e-1,'eps':0.01, 'maxiter':100}, # orbits 100, 166 are good fro 250m, orbit 173 not good enough for 250m v6
-                           #options={'ftol':10e-1,'eps':0.03, 'maxiter':25}, #  v5
-                           #options={'ftol':5e-2,'eps':0.03, 'maxiter':100}, # high discrepances at R and RSME v4
-                           #options={'ftol':10e-1,'eps':0.03, 'maxiter':100}, #this is ok for spatial resolution evaluation v3
-                           #options={'maxiter':25}, the combination that generated ISMN validation figures
-                           #options={'ftol':10e-1,'eps':0.05, 'maxiter':100}, # v1
+                           options={'ftol':opt_parms['ftol'],'eps':opt_parms['eps'], 'maxiter':opt_parms['maxiter']},
                            method=opt_method,
                            bounds = bounds,
                            constraints = cons)
