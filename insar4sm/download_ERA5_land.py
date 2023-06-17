@@ -46,20 +46,20 @@ def retrieve_ERA5_land_data(ERA5_variables:list, year_str:str, month_str:str, da
         https://confluence.ecmwf.int/display/CKB/ERA5-Land%3A+data+documentation
         https://essd.copernicus.org/articles/13/4349/2021/
     """
-
-    c = cdsapi.Client()
-    c.retrieve(
-        'reanalysis-era5-land',
-        {
-            'variable': ERA5_variables,
-            'year': year_str,
-            'month': month_str,
-            'day': days_list,
-            'time': time_list,
-            'area': bbox_cdsapi,
-            'format': 'netcdf',
-        },
-        export_filename)
+    if not os.path.exists(export_filename):
+        c = cdsapi.Client()
+        c.retrieve(
+            'reanalysis-era5-land',
+            {
+                'variable': ERA5_variables,
+                'year': year_str,
+                'month': month_str,
+                'day': days_list,
+                'time': time_list,
+                'area': bbox_cdsapi,
+                'format': 'netcdf',
+            },
+            export_filename)
         
     return export_filename
 
@@ -77,7 +77,7 @@ def Get_ERA5_data(ERA5_variables:list,
         AOI_file (str): vector polygon file of the AOI.
         ERA5_dir (str): Path that ERA5 data will be saved.
     Returns:
-        Downloaded_datasets (list): ERA5 downloaded datasets
+        ERA5_sm_filename (str): the filename of the merged ERA5-land information
     """
 
     lon_min, lat_min,  lon_max, lat_max = np.squeeze(gpd.read_file(AOI_file).bounds.values)
@@ -128,9 +128,7 @@ def Get_ERA5_data(ERA5_variables:list,
                                                     time_list = last_day_times_str,
                                                     bbox_cdsapi = bbox_cdsapi,
                                                     export_filename = os.path.join(ERA5_dir,'Last_day.nc'))
-        
-        Downloaded_datasets.append(last_day_dataset)
-        
+
         # For each month we do a request
         df2 = df.truncate(after=datetime.datetime(last_day_df.year, last_day_df.month, last_day_df.day, 0)).iloc[:-1]
         
@@ -142,18 +140,19 @@ def Get_ERA5_data(ERA5_variables:list,
                 df_month = df_year[df_year['month_str']==month]
                 days_request = np.unique(df_month['day_str']).tolist()
                 hours_request = np.unique(df_month['hour_str']).tolist()
-                
+                export_filename = os.path.join(ERA5_dir,'{}_{}_ssm.nc'.format(month_request,year_request))
+
                 monthly_dataset = retrieve_ERA5_land_data(ERA5_variables = ERA5_variables,
                                                       year_str = year_request,
                                                       month_str = month_request,
                                                       days_list = days_request,
                                                       time_list = hours_request,
                                                       bbox_cdsapi = bbox_cdsapi,
-                                                      export_filename = os.path.join(ERA5_dir,
-                                                                                     '{}_{}_ssm.nc'.format(month_request,
-                                                                                                                     year_request)))
+                                                      export_filename = export_filename)
                 
                 Downloaded_datasets.append(monthly_dataset)
+        
+        Downloaded_datasets.append(last_day_dataset)
         ds = xr.open_mfdataset(Downloaded_datasets, combine='by_coords')
         ds.to_netcdf(ERA5_sm_filename) # Export netcdf file
 
