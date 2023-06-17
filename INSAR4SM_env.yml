@@ -1,4 +1,4 @@
-name: insar4sm_test
+name: insar4sm
 channels:
   - conda-forge
   - defaults
