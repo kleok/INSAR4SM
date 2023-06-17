@@ -7,23 +7,28 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 from tqdm import tqdm
+from scipy.stats import pearsonr
+import datetime
 import matplotlib.pyplot as plt
 
 #--------------------- INSAR4SM functionalities --------------
+from insar4sm.download_ERA5_land import Get_ERA5_data
 from insar4sm.classes import INSAR4SM_stack, SM_point
 from insar4sm.joblib_progress_bar import tqdm_joblib
 
-def sm_estimation(stack:INSAR4SM_stack, sm_ind:int)->np.array:
+def sm_estimation(stack:INSAR4SM_stack, sm_ind:int, DS_flag: bool = True)->np.array:
     """Estimates soil moisture using insar4sm functionalities
 
     Args:
         stack (INSAR4SM_stack): the object of the INSAR4SM_stack class
         sm_ind (int): index of soil moisture estimation point
+        DS_flag (bool): flag that determines if distributed scatterers will be computed.
 
     Returns:
         np.array: soil moisture estimations from inversion
     """
     sm_point_ts = SM_point(stack, sm_ind)
+    sm_point_ts.amp_sel = DS_flag
     sm_point_ts.get_DS_info(stack)
     sm_point_ts.calc_covar_matrix()
     if sm_point_ts.non_coverage or np.all(sm_point_ts.amp_DS==0):
@@ -43,10 +48,20 @@ def sm_estimation(stack:INSAR4SM_stack, sm_ind:int)->np.array:
 #############################################################################
 
 # the name of your project
-projectname = 'INSAR4SM_estimations_newtest1'
+projectname = 'My_first_INSAR4SM_app'
+
+# number of CPUs to be used
+n_CPUs = 6
+
+# the output directory 
+export_dir = '/RSL02/SM_Arabia/{}'.format(projectname)
 
 # the directory of the topstack processing stack
-topstackDir = '/RSL02/SM_Arabia/Topstack_processing'
+topstackDir = '/RSL02/SM_Arabia/Topstack_processing_2023/'
+
+# soil information datasets (https://soilgrids.org/)
+sand_soilgrids = '/RSL02/SM_Arabia/soilgrids/clay.tif'
+clay_soilgrids = '/RSL02/SM_Arabia/soilgrids/sand.tif'
 
 # time of Sentinel-1 pass.
 orbit_time = '15:00:00'
@@ -54,33 +69,51 @@ orbit_time = '15:00:00'
 # the AOI geojson file, ensure that AOI is inside your topstack stack
 AOI = '/RSL02/SM_Arabia/aoi/aoi_test.geojson'
 
-# spatial resolution of soil moisture grid in meters
-grid_size = 250
+# half spatial resolution of soil moisture grid in meters
+grid_size = 125
 
-# You can set manually a dry date (one of your SAR acquisition dates ) or set to None
+# You can set manually a dry date (one of your SAR acquisition dates) or set to None
 dry_date = '20180401' 
 # set to True in case you provide manually an dry_date
 dry_date_manual_flag = True
 
-# the meteorological file. You can either provide an ERA5-land file or a csv file with 3 columns (Datetimes, tp__m, skt__K).
-meteo_file = '/RSL02/SM_Arabia/era5/adaptor.mars.internal-1665654570.8663068-23624-3-8bce5925-a7e7-4993-a701-0e05b4e9dabd.nc'
-# set to True in case you provide an ERA5-Land file
+#%%##########################################################################
+#-----------        Provide meteorological data     ------------------------#
+#############################################################################
+# You can either 
+# 1. provide an ERA5-land file with ['total_precipitation','skin_temperature','volumetric_soil_water_layer_1']
+# 2. a csv file with 3 columns (Datetimes, tp__m, skt__K) 
+
+#meteo_file = '/RSL02/SM_Arabia/My_first_INSAR4SM_app/ERA5/ERA5_20180401T000000_20181127T230000_17.5_53.6_17.2_53.9.nc'
+meteo_file = None
+
+# 3. set start and end date and automatically download the ERA5-land data
+if meteo_file == None:
+    start_date = '20180401' # format is YYYYMMDD
+    end_date = '20181127' # format is YYYYMMDD
+
+    ERA5_dir = os.path.join(export_dir, 'ERA5')
+    if not os.path.exists(ERA5_dir): os.makedirs(ERA5_dir)
+
+    meteo_file = Get_ERA5_data(ERA5_variables = ['total_precipitation','skin_temperature','volumetric_soil_water_layer_1'],
+                            start_datetime = datetime.datetime.strptime('{}T000000'.format(start_date), '%Y%m%dT%H%M%S'),
+                            end_datetime =  datetime.datetime.strptime('{}T230000'.format(end_date), '%Y%m%dT%H%M%S'),
+                            AOI_file = AOI,
+                            ERA5_dir = ERA5_dir)
+    
+# set to True in case you provide or downloaded an ERA5-Land file
 ERA5_flag = True
+
 # In case you downloaded surface soil moisture from ERA5-land, set to True for comparison purposes
 ERA5_sm_flag = True
 
-# soil information datasets (https://soilgrids.org/)
-sand_soilgrids = '/RSL02/SM_Arabia/soilgrids/clay.tif'
-clay_soilgrids = '/RSL02/SM_Arabia/soilgrids/sand.tif'
-
-# the output directory 
-export_dir = '/RSL02/SM_Arabia/{}'.format(projectname)
 #%%##########################################################################
 #-----------               InSAR4SM pipeline        ------------------------#
 #############################################################################
                                                                                                                                                                                                                                                                                                                                                                                                                                                     
 stack = INSAR4SM_stack(topstackDir = topstackDir,
                        projectname = projectname,
+                       n_CPUs = n_CPUs,
                        AOI = AOI,
                        meteo_file = meteo_file,
                        ERA5_flag = ERA5_flag,
@@ -113,7 +146,8 @@ if ERA5_sm_flag:
     comparison_df = (stack.meteo_sel_df['swvl1__m**3 m**-3']*100).copy().to_frame()
     
     sm_estimations_df.dropna(inplace=True)
-    sm_estimations_df.drop(columns='geometry', inplace=True)
+    if 'geometry' in sm_estimations_df.columns:
+        sm_estimations_df.drop(columns='geometry', inplace=True)
     comparison_df['sm_inverted'] = sm_estimations_df.mean(axis=0).values
     comparison_df.to_csv('{}/comparison_{}.csv'.format(stack.export_dir, grid_size), index=False)
     
@@ -121,7 +155,9 @@ if ERA5_sm_flag:
     targets = comparison_df['sm_inverted'].values
     n = predictions.shape[0]
     rmse = np.linalg.norm(predictions - targets) / np.sqrt(n)
+    r, p_value = pearsonr(predictions, targets)
+
     comparison_df.plot(figsize=(13,13), style='.-')
-    plt.title('RMSE: {} m3/m3'.format(round(rmse,2)))
+    plt.title('RMSE: {:.2f} m3/m3 \n R: {:.2f}'.format(rmse,r))
     plt.savefig('{}/ERA5_comparison_{}.png'.format(stack.export_dir, grid_size), dpi=200)
     plt.close()

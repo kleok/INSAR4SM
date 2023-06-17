@@ -24,9 +24,11 @@ def rewrap(data:np.array)-> np.array:
 def inversion(SM0:np.array,
               DS_mean_inc_angle:float,
               opt_method:str,
+              opt_parms:dict,
               Phase_closures:np.array,
               Mask_ph_closure:np.array,
               SM_coh:np.array,
+              weight_factor: float,
               dry_index:int,
               dry_bands_inds:np.array,
               sm_dry:float,
@@ -42,6 +44,7 @@ def inversion(SM0:np.array,
         Phase_closures (np.array): Phase closures
         Mask_ph_closure (np.array): boolean mask 
         SM_coh (np.array): coherence due to soil moisture variations
+        weight_factor (float): the weighting factor of coherence loss
         dry_index (int): index of driest SAR acquisition
         dry_bands_inds (np.array): Indices of SAR acquisitions considered dry
         sm_dry (float): Driest soil moisture value
@@ -87,7 +90,7 @@ def inversion(SM0:np.array,
         
         Coh_SM_model = np.abs(Covar_SM_model)[coh_final_mask]
         
-        Coh_result = np.linalg.norm(Coh_SM_model-Coh_obs)
+        Coh_result = np.power(np.linalg.norm(Coh_SM_model-Coh_obs),2)
     
         # phase closure component cost
         
@@ -96,7 +99,7 @@ def inversion(SM0:np.array,
         Phase_closure_result = np.sum(np.power(Phase_closures_residuals, 2))
         
         # final cost
-        result = Coh_result + Phase_closure_result
+        result = weight_factor*Coh_result + Phase_closure_result
         #print(result)
         return result
     
@@ -120,13 +123,13 @@ def inversion(SM0:np.array,
 
     cons = tuple(cons_list)
     
+    
     # minimization
     try:
         
         results = minimize(objective_function,
                            SM0,
-                           options={'ftol':10e-1,'eps':0.05, 'maxiter':100},
-                           #method='trust-constr',
+                           options={'ftol':opt_parms['ftol'],'eps':opt_parms['eps'], 'maxiter':opt_parms['maxiter']},
                            method=opt_method,
                            bounds = bounds,
                            constraints = cons)
@@ -150,7 +153,9 @@ def invert_sm(ph_DS:np.array,
               band_end:int,
               nbands:int,
               opt_method:str,
+              opt_parms:dict,
               ph_closure_dist:int = 15,
+              weight_factor:float = 1,
               sm_dry_state:float = 3.0,
               freq_GHz:float = 5.405,
               clay_pct:float = 11,
@@ -223,9 +228,11 @@ def invert_sm(ph_DS:np.array,
     SM_results = inversion(SM0 = SM_index,
                            DS_mean_inc_angle = DS_mean_inc_angle,
                            opt_method = opt_method,
+                           opt_parms = opt_parms,
                            Phase_closures = Phase_closures,
                            Mask_ph_closure = Mask_ph_closure,
                            SM_coh = SM_coh,
+                           weight_factor = weight_factor,
                            dry_index = dry_index,
                            dry_bands_inds = dry_bands_inds,
                            sm_dry = sm_dry_state,

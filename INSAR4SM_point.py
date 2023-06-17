@@ -27,8 +27,8 @@ from insar4sm.classes import INSAR4SM_stack, SM_point
 #############################################################################
 
 # The ISMN station
-# station_name = 'FordDryLake'
-station_name = 'DesertCenter'
+station_name = 'FordDryLake'
+#station_name = 'DesertCenter'
 orbit_time = '02:00:00'
 
 #orbit_nums = ['100','173']
@@ -36,7 +36,7 @@ orbit_time = '02:00:00'
 #sq_sizes = [50,100,200,250,300,400,500]
 
 # orbit_num = '100'
-#orbit_num = '173'
+
 orbit_num = '166'
 sq_size = 250
 
@@ -63,8 +63,8 @@ ERA5_sm_flag = True
 export_dir = '/RSL02/SM_NA/{}'.format(projectname)
 
 # soil information datasets (https://soilgrids.org/)
-sand_soilgrids = 87
-clay_soilgrids = 13
+sand_soilgrids = 79
+clay_soilgrids = 10
 
 # the insitu measurements in csv format
 ISMN_csv = '/RSL02/SM_NA/ISMN/{}/ismn_station_{}.csv'.format(station_name, station_name)
@@ -107,10 +107,8 @@ sm_point_ts = SM_point(stack, sm_ind=0)
 sm_point_ts.get_DS_info(stack)
 sm_point_ts.calc_covar_matrix()
 sm_point_ts.get_DS_geometry(stack)
-
 sm_point_ts.calc_driest_date()
-#sm_point_ts.driest_date = pd.to_datetime('20180704')
-sm_point_ts.driest_date = pd.to_datetime('20180710')
+sm_point_ts.driest_date = pd.to_datetime('20180803')
 sm_point_ts.calc_sm_sorting()
 
 # in_situ_data = pd.read_csv('/RSL02/SM_NA/comparison_FordDryLake.csv')

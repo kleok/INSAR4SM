@@ -13,7 +13,7 @@ from insar4sm.meteo_funcs import find_dry_SARs
 from insar4sm.calc_int_data import calc_int_amp
 from insar4sm.gridding import create_grid_xy
 from insar4sm.DS_funcs import compute_Covar_Coh_weighted, get_DS_pixels, llh2xy
-from insar4sm.DS_funcs import find_best_pixels_ph, find_best_pixels_amp_fast
+from insar4sm.DS_funcs import find_best_pixels_ph, find_best_pixels_amp_fast, find_best_pixels_amp
 from insar4sm.sorting_funcs import find_sm_sorting
 from insar4sm.coh_funcs import calc_SM_coherences
 from insar4sm.calc_SM_index import calc_burgi_sm_index
@@ -23,7 +23,7 @@ from insar4sm.soil_funcs import get_soilgrids_value
 class INSAR4SM_stack:
     """Constructing and processing InSAR4SM stack
     """
-    def __init__(self, topstackDir, projectname, AOI, meteo_file, ERA5_flag, sand, clay, orbit_time, export_dir):
+    def __init__(self, topstackDir, projectname, n_CPUs, AOI, meteo_file, ERA5_flag, sand, clay, orbit_time, export_dir):
         
         #----------------------Basic parms ------------
         self.projectname = projectname
@@ -34,7 +34,7 @@ class INSAR4SM_stack:
         self.ERA5_flag = ERA5_flag
         self.orbit_time = orbit_time
         self.buffer = 0.005
-        self.CPUs = 6
+        self.CPUs = n_CPUs
         self.sand_data = sand
         self.clay_data = clay
         
@@ -161,13 +161,18 @@ class SM_point:
         self.end_index = insar4sm_stack.end_index
         self.dry_dates = insar4sm_stack.dry_dates
         
-        # processing parms
-        
+        # DS processing parms
         self.amp_sel = True
         self.ph_keep_percent = 1
         self.save = False
-        self.p_value_thres = 0.05
-        self.n_iters = 100
+        self.DS_center_sel = True
+        self.p_value_thres = 0.1
+        self.similarity_perc = 0.5
+        self.az_size = 1
+        self.rg_size = 1
+
+        # coherence processing parms
+        self.n_iters = 500
         self.coh_denoise = False
         self.max_coh_flag = True
         self.simple_exp_model = False
@@ -175,9 +180,15 @@ class SM_point:
         self.temp_thres = 0
         
         # inversion parms
+        self.opt_parms = {}
+        self.opt_parms['ftol'] = 10e-1
+        self.opt_parms['eps'] = 0.03
+        self.opt_parms['maxiter'] = 25
+
         self.opt_method = 'SLSQP' # or 'trust-constr'
-        self.ph_closure_dist = 4 # distance between sar acquisitions
-        self.sm_dry_state = 3  # in m3/m3
+        self.ph_closure_dist = 6 # distance between sar acquisitions
+        self.weight_factor = 1 # the weighting factor of coherence cost
+        self.sm_dry_state = 2.8  # in m3/m3
         self.freq_GHz = 5.405
         
         # read soil data
@@ -202,8 +213,7 @@ class SM_point:
         self.n_ds = 1
         self.DS_ind = 0
    
-        # datasets for SM_point
-        
+        # intialize datasets for SM_point
         self.bp_DS = np.zeros((self.n_ds, self.n_ifg), dtype=np.float64)
         self.inc_DS = np.zeros((self.n_ds), dtype=np.float64)
         self.ph_DS = np.zeros((self.n_ds,self.n_ifg,self.n_ifg), dtype=np.complex128)
@@ -217,7 +227,8 @@ class SM_point:
         
         
     def get_DS_info(self, insar4sm_stack:INSAR4SM_stack):
-        """Extracts the SLC SAR pixels that will be used for constructing distributed scatterer (DS). Extracts the inteferometric phase and amplitude of DS.
+        """Extracts the SLC SAR pixels that will be used for constructing distributed scatterer (DS).
+         Extracts the inteferometric phase and amplitude of DS.
 
         Args:
             insar4sm_stack (INSAR4SM_stack): Object with data and attributes of InSAR4SM stack
@@ -233,18 +244,26 @@ class SM_point:
         # 2. For all combinations of pixels run amplitude statistical test to 
         #    find the similar ones.
         if self.amp_sel:
-            self.Best_pixels_amp = find_best_pixels_amp_fast(self.DS_coords_1,
-                                                            self.DS_coords_2,
-                                                            self.DS_amp_values,
-                                                            insar4sm_stack.amp_stack,
-                                                            p_value_thres = self.p_value_thres)
+            if self.DS_center_sel:
+                self.Best_pixels_amp = find_best_pixels_amp_fast(self.DS_coords_1,
+                                                                self.DS_coords_2,
+                                                                self.DS_amp_values,
+                                                                insar4sm_stack.amp_stack,
+                                                                p_value_thres = self.p_value_thres,
+                                                                az_size = self.az_size,
+                                                                rg_size = self.rg_size)
+            else:
+                self.Best_pixels_amp = find_best_pixels_amp(self.DS_coords_1,
+                                                                self.DS_coords_2,
+                                                                self.DS_amp_values,
+                                                                p_value_thres = self.p_value_thres,
+                                                                similarity_perc = self.similarity_perc)
         else:
             self.Best_pixels_amp = np.ones((self.DS_coords_1.shape[0]), dtype=np.bool_)
             
         # 3. For all combinations of amplitude similar pixels, calculate the 
         # DS coherence in order to find the ones that yield the highest 
         # temporal coherence.
-        
         self.Best_pixels_ph = find_best_pixels_ph(self.DS_coords_1,
                                                   self.DS_coords_2,
                                                   self.DS_slc_values,
@@ -452,7 +471,9 @@ class SM_point:
                                      self.end_index,
                                      self.nbands,
                                      self.opt_method,
+                                     self.opt_parms,
                                      self.ph_closure_dist,
+                                     self.weight_factor,
                                      self.sm_dry_state,
                                      self.freq_GHz,
                                      self.clay_pct,

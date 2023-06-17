@@ -4,6 +4,8 @@ channels:
   - defaults
 dependencies:
   - python==3.9.12
+  - cdsapi==0.6.1
+  - xarray==0.21.1
   - pandas==1.4.2
   - geopandas==0.10.2
   - numpy==1.22.3
@@ -20,4 +22,5 @@ dependencies:
   - gdal==3.4.2
   - glib==2.72.1
   - scipy==1.8.0
+  - dask==2022.2.1
   - pytest==7.1.3

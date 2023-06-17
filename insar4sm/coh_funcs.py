@@ -194,6 +194,17 @@ def calc_SM_coherences(Datetimes:list,
     # replace with nan the coherence values that are biggest than one.
     coh_values[coh_values>1] = np.nan
 
+    # # rescale the coherence between 0 and 1
+    # coh_range = np.nanquantile(coh_values,0.99) - np.nanquantile(coh_values,0.01)
+    # coh_values = (coh_values - np.nanquantile(coh_values,0.01))/coh_range
+
+    # coh_values[coh_values>1] = np.nan
+    # coh_values[coh_values<0] = np.nan
+
+    # print('quantile 01: {}'.format(np.nanquantile(coh_values,0.01)))
+    # print('quantile 99: {}'.format(np.nanquantile(coh_values,0.99)))
+    # print('range: {}'.format(coh_range))
+
     # coherence matrix related to soil moisture variations
     coh_sm[ind_DS, :, :]  = coh_values
 
@@ -203,3 +214,4 @@ def calc_SM_coherences(Datetimes:list,
     coh_sm_std[ind_DS,:] = np.nanstd(coh_sm_dry, axis=0)
         
     return coh_sm, coh_sm_mean, coh_sm_std
+# %%

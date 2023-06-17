@@ -176,7 +176,8 @@ def find_best_pixels_amp_fast(DS_coords_1:np.array,
                               DS_amp_values:np.array,
                               amp_stack:np.array,
                               p_value_thres:float = 0.05,
-                              win_size:int = 1)->np.array:
+                              az_size:int = 0,
+                              rg_size:int = 2)->np.array:
     """Finds a subset of DS_pixels that share the same amplitude temporal behaviour, via Kolmogorov-Smirnov test. Reference amplitude values are considered the ones close to center (at a certain window radius). 
 
     Args:
@@ -200,8 +201,9 @@ def find_best_pixels_amp_fast(DS_coords_1:np.array,
     # compare with mean intensity value of center region
     center_coord1 = int(np.mean(DS_coords_1))
     center_coord2 = int(np.mean(DS_coords_2))
-    center_amp_values = amp_stack[:,center_coord1-win_size:center_coord1+win_size+1,
-                                  center_coord2-win_size:center_coord2+win_size+1]
+    center_amp_values = amp_stack[:,
+                                  center_coord1-az_size:center_coord1+az_size+1, # azimuth dimension ~ 20 meters
+                                  center_coord2-rg_size:center_coord2+rg_size+1] # range dimension ~ 4 meters
     center_amp_values_flatten = np.nanmean(np.nanmean(center_amp_values, axis=1), axis=1)
     mean_DS_amp = center_amp_values_flatten.copy()
     
