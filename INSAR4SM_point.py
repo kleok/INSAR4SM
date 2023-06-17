@@ -36,7 +36,6 @@ orbit_time = '02:00:00'
 #sq_sizes = [50,100,200,250,300,400,500]
 
 # orbit_num = '100'
-# orbit_num = '173'
 
 orbit_num = '166'
 sq_size = 250
@@ -108,7 +107,6 @@ sm_point_ts = SM_point(stack, sm_ind=0)
 sm_point_ts.get_DS_info(stack)
 sm_point_ts.calc_covar_matrix()
 sm_point_ts.get_DS_geometry(stack)
-
 sm_point_ts.calc_driest_date()
 sm_point_ts.driest_date = pd.to_datetime('20180803')
 sm_point_ts.calc_sm_sorting()
