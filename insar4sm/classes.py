@@ -23,7 +23,7 @@ from insar4sm.soil_funcs import get_soilgrids_value
 class INSAR4SM_stack:
     """Constructing and processing InSAR4SM stack
     """
-    def __init__(self, topstackDir, projectname, AOI, meteo_file, ERA5_flag, sand, clay, orbit_time, export_dir):
+    def __init__(self, topstackDir, projectname, n_CPUs, AOI, meteo_file, ERA5_flag, sand, clay, orbit_time, export_dir):
         
         #----------------------Basic parms ------------
         self.projectname = projectname
@@ -34,7 +34,7 @@ class INSAR4SM_stack:
         self.ERA5_flag = ERA5_flag
         self.orbit_time = orbit_time
         self.buffer = 0.005
-        self.CPUs = 6
+        self.CPUs = n_CPUs
         self.sand_data = sand
         self.clay_data = clay
         
