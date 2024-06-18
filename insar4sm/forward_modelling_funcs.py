@@ -3,6 +3,7 @@
 from __future__ import annotations
 import numpy as np
 from insar4sm.dielectic_models import hallikainen_1985_calc
+from itertools import combinations
 
 def vertical_wavenumber_calc(mv_pct:float,
                             theta_inc:float|None = None,
@@ -47,9 +48,11 @@ def vertical_wavenumber_calc(mv_pct:float,
     # a negative imaginary part. 
     # This corresponds to a wave that attenuates going downward, so that 
     # |E`(x, y, z)| → 0 when z → ∞.    
-    
-    if np.imag(k)>0:
-        k = np.conjugate(k)
+    if type(k) == np.ndarray:
+        k[np.imag(k) > 1] = np.conjugate(k[np.imag(k) > 1])
+    else:
+        if np.imag(k)>0:
+            k = np.conjugate(k)
         
     return k
 
@@ -162,31 +165,25 @@ def Covar_modelled_calc(SM:np.array, theta_inc:float, freq_GHz:float, clay_pct:f
     
     if isinstance(ifg_pairs, type(None)):
         sar_primaries = np.arange(n_sars)
-        
-        ifg_pairs=[]
-        for sar_primary in sar_primaries:
-            sar_secondaries = sar_primaries[sar_primaries>sar_primary]
-            for sar_secondary in sar_secondaries:
-                ifg_pairs.append([sar_primary,sar_secondary])
+        ifg_pairs = np.array([(l,r) for l,r in combinations(sar_primaries, 2)])
+
             
         assert len(ifg_pairs) == n_ifgs
     
     Covar_model = np.ones((n_sars,n_sars), dtype=np.complex128)
+
     
-    for ifg_index, sar_indices in enumerate(ifg_pairs):
-        sar1, sar2 = sar_indices
-        SM_sar1 = SM[sar1]
-        SM_sar2 = SM[sar2]
-        res = InSAR_coherence_model(mv_pct1 = SM_sar1,
-                                    mv_pct2 = SM_sar2,
+
+
+    res = InSAR_coherence_model(mv_pct1 = SM[ifg_pairs[:,0]],
+                                    mv_pct2 = SM[ifg_pairs[:,1]],
                                     theta_inc = theta_inc,
                                     freq_GHz= freq_GHz,
                                     clay_pct = clay_pct,
                                     sand_pct = sand_pct) 
-        
-        Covar_model[sar1, sar2] = res
-        Covar_model[sar2, sar1] = np.conj(res)
-    
+    Covar_model[ifg_pairs[:,0], ifg_pairs[:,1]] = res
+    Covar_model[ifg_pairs[:,1], ifg_pairs[:,0]] = np.conj(res)
+
     return Covar_model
 
 def phase_closure_modelled_calc(SM:np.array, freq_GHz:float, clay_pct:float, sand_pct:float, theta_inc:float|None= None, ifg_pairs:list|None=None, triangle_idx_array:np.array=None)-> tuple[np.array, np.array, np.array, np.array, list]:
@@ -214,7 +211,6 @@ def phase_closure_modelled_calc(SM:np.array, freq_GHz:float, clay_pct:float, san
     
     if isinstance(ifg_pairs, type(None)):
         sar_primaries = np.arange(n_sars)
-        
         ifg_pairs=[]
         for sar_primary in sar_primaries:
             sar_secondaries = sar_primaries[sar_primaries>sar_primary]
@@ -274,29 +270,16 @@ def phase_closure_modelled_calc(SM:np.array, freq_GHz:float, clay_pct:float, san
         G[i, triangle_idx_array[i, 0]] = 1
         G[i, triangle_idx_array[i, 1]] = -1
         G[i, triangle_idx_array[i, 2]] = 1     
-    
-    # 
-    Phase_closures_model = np.zeros((num_triangle,), np.float64)
-    
-    for i in range(num_triangle):
-        temp_ph_closure = G[i,:].nonzero()
-        ifg1, ifg2, ifg3 = temp_ph_closure[0]
-        sar1, sar2 = ifg_pairs[ifg1]
-        sar1, sar3 = ifg_pairs[ifg2]
-        sar2, sar3 = ifg_pairs[ifg3]
-        SM_sar1 = SM[sar1]
-        SM_sar2 = SM[sar2]
-        SM_sar3 = SM[sar3]
-
-            
-        Phase_closures_model[i] = Single_phase_closure_model(SM_sar1,
-                                                            SM_sar2,
-                                                            SM_sar3,
+ 
+    ifg_triples = np.array([(i,j,k) for i,j,k in combinations(sar_primaries, 3)])
+    Phase_closures_model = Single_phase_closure_model(SM[ifg_triples[:,0]],
+                                                            SM[ifg_triples[:,1]],
+                                                            SM[ifg_triples[:,2]],
                                                             theta_inc,
                                                             freq_GHz,
                                                             clay_pct,
                                                             sand_pct)
- 
+
     return Phase_closures_model, ifg_soil_moistures, G, triangle_idx_array, ifg_pairs   
 
 

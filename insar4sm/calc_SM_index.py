@@ -27,11 +27,10 @@ def calc_coh_model(SM:np.array, coh_row_inds:np.array, coh_col_inds:np.array)->n
     
     """
     
-    n_cohs = coh_row_inds.shape[0]
-    coh_model = np.zeros(n_cohs)
     
-    for n_coh in range(n_cohs):
-      coh_model[n_coh] = np.exp(-np.abs(np.log(SM[coh_row_inds[n_coh]])-np.log(SM[coh_col_inds[n_coh]])))
+    coh_model = np.exp(-np.abs(np.log(SM[coh_row_inds])-np.log(SM[coh_col_inds])))
+    
+
       
     return coh_model
 
@@ -151,7 +150,7 @@ def calc_burgi_sm_index(coh_sm:np.array, SM_sorting:np.array, n_dry_bands:int, s
     bounds = []
     for element in range(coh.shape[0]):
         bounds.append(bounds_SM0)
-      
+
     def objective_function(SM0):  
       coh_model = calc_coh_model(SM0, coh_row_inds, coh_col_inds)
     

@@ -100,7 +100,7 @@ def inversion(SM0:np.array,
         
         # final cost
         result = weight_factor*Coh_result + Phase_closure_result
-        #print(result)
+
         return result
     
     # bounds of inverted soil moistures
@@ -110,11 +110,11 @@ def inversion(SM0:np.array,
     for element in range(n_bands_size):
         bounds.append(bounds_SM0)
         
-    # contraints
+    # constraints
     
     cons_list = []
     
-    # contraints related to dry SAR dates
+    # constraints related to dry SAR dates
     sm_dry_thres = sm_dry + 1
     for sar_dry_ind in dry_bands_inds:
         cons_list.append({'type': 'ineq', 'fun': lambda SM:  sm_dry_thres-SM[sar_dry_ind]})
@@ -122,7 +122,6 @@ def inversion(SM0:np.array,
     cons_list.append({'type': 'eq', 'fun': lambda SM:  SM[dry_index] - sm_dry})
 
     cons = tuple(cons_list)
-    
     
     # minimization
     try:
@@ -188,6 +187,7 @@ def invert_sm(ph_DS:np.array,
         De Zan, F., Parizzi, A., Prats-Iraola, P., Lopez-Dekker, P., 2014. A SAR Interferometric Model for Soil Moisture. IEEE Trans. Geosci. Remote Sens. 52, 418-425. https://doi.org/10.1109/TGRS.2013.2241069   
     """
     #%% 1. Load data
+    
     DS_mean_inc_angle = inc_DS[0]
 
     SM_covar = ph_DS[DS_ind, band_start:band_end, band_start:band_end]
@@ -200,18 +200,20 @@ def invert_sm(ph_DS:np.array,
     
     ## 1. Create the phase closure mask to select the short-time phase closures!
     # construct the triangle_idx_array and ifg_pairs matrices
-
+    # phase_closure_modelled_calc_start_time = time.time()
     [Phase_closures_model,
       ifg_soil_moistures,
       G,
       triangle_idx_array,
-      ifg_pairs]  = phase_closure_modelled_calc (np.random.rand(nbands),
+      ifg_pairs]  = phase_closure_modelled_calc(np.random.rand(nbands),
                                                 freq_GHz,
                                                 clay_pct,
                                                 sand_pct,
                                                 DS_mean_inc_angle)
                                                  
+
     # create mask with short time spans of phase closures                                           
+    
     Mask_ph_closure = np.zeros(triangle_idx_array.shape[0], np.bool)
     for ph_closure_ind, ph_closure_ints in enumerate(triangle_idx_array):
         int0 = ifg_pairs[ph_closure_ints[0]]
@@ -224,7 +226,6 @@ def invert_sm(ph_DS:np.array,
             Mask_ph_closure[ph_closure_ind] = True
 
     ## 2. Inversion
-    
     SM_results = inversion(SM0 = SM_index,
                            DS_mean_inc_angle = DS_mean_inc_angle,
                            opt_method = opt_method,
