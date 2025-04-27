@@ -1,6 +1,6 @@
 import numpy as np
 
-def hallikainen_1985_calc(clay_pct:float, sand_pct:float, mv_pct:float, freq_GHz:float)->np.complex:
+def hallikainen_1985_calc(clay_pct:float, sand_pct:float, mv_pct:float, freq_GHz:float)->np.complex128:
     """Computes the complex dielectric constant based on the empirical relations from Hallikainen et al., 1985.
 
     Args:
@@ -80,10 +80,21 @@ def hallikainen_1985_calc(clay_pct:float, sand_pct:float, mv_pct:float, freq_GHz
                     [+34.126, +0.143, +0.206],
                     [+29.945, +0.275, +0.377]])
 
-    E_r = (a_r @ x) + (b_r @ x) * mv_dec + (c_r @ x) * mv_dec ** 2
-    E_i = (a_i @ x) + (b_i @ x) * mv_dec + (c_i @ x) * mv_dec ** 2
+    if type(mv_dec) == np.ndarray:
+        
+        ones = np.ones((mv_dec.shape[0], F.shape[0]))
+        E_r_arr = (ones*(a_r @ x)).T +  (ones*(b_r @ x)).T * mv_dec +  (ones*(c_r @ x)).T * mv_dec ** 2
+        E_i_arr = (ones*(a_i @ x)).T +  (ones*(b_i @ x)).T * mv_dec +  (ones*(c_i @ x)).T * mv_dec ** 2
+        E_r_arr = E_r_arr.T
+        E_i_arr = E_i_arr.T
+        e_r_arr = np.array([np.interp(freq_GHz, F, E_r) for E_r in E_r_arr])
+        e_i_arr = np.array([np.interp(freq_GHz, F, E_i) for E_i in E_i_arr])
+        return e_r_arr - 1j * e_i_arr
 
-    e_r = np.interp(freq_GHz, F, E_r)
-    e_i = np.interp(freq_GHz, F, E_i)
+    else:
+        E_r = (a_r @ x) +  (b_r @ x) * mv_dec +  (c_r @ x) * mv_dec ** 2
+        E_i = (a_i @ x) +  (b_i @ x) * mv_dec +  (c_i @ x) * mv_dec ** 2
 
+        e_r = np.interp(freq_GHz, F, E_r)
+        e_i = np.interp(freq_GHz, F, E_i)
     return e_r - 1j * e_i
