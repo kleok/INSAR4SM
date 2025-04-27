@@ -32,6 +32,7 @@ def latlon_2_SAR_coord(lat_data:np.array, lon_data:np.array, lat_p:float, lon_p:
         print('It seems that you AOI is outside of Topstack region')
         print('We will modify your AOI...')
         dist += 0.001
+        n_iter += 1
         lat_mask = np.abs(lat_data-lat_p) < dist
         lon_mask = np.abs(lon_data-lon_p) < dist
         mask = lat_mask*lon_mask
