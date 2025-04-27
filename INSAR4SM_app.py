@@ -129,7 +129,7 @@ stack.calc_insar_stack()
 stack.calc_grid(grid_size = grid_size)
 
 with tqdm_joblib(tqdm(desc="SM Invertions", total=stack.n_sm_points)) as progress_bar:
-    sm_estimations_list = Parallel(n_jobs=stack.CPUs, backend="threading")(delayed(sm_estimation)(stack, sm_ind) for sm_ind in range(stack.n_sm_points))
+    sm_estimations_list = Parallel(n_jobs=stack.CPUs)(delayed(sm_estimation)(stack, sm_ind) for sm_ind in range(stack.n_sm_points))
 
 
 column_dates = [slc_date.strftime("D%Y%m%d") for slc_date in stack.slc_datetimes]
