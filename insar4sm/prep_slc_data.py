@@ -32,6 +32,7 @@ def latlon_2_SAR_coord(lat_data:np.array, lon_data:np.array, lat_p:float, lon_p:
         print('It seems that you AOI is outside of Topstack region')
         print('We will modify your AOI...')
         dist += 0.001
+        n_iter += 1
         lat_mask = np.abs(lat_data-lat_p) < dist
         lon_mask = np.abs(lon_data-lon_p) < dist
         mask = lat_mask*lon_mask
@@ -65,8 +66,8 @@ def get_SAR_borders(merged_dir:str, AOI_WGS84:str)->tuple[int,int,int,int]:
     
     polygon_WGS84 = gpd.read_file(AOI_WGS84).geometry.iloc[0]
     
-    if type(polygon_WGS84) == shapely.geometry.multipolygon.MultiPolygon:
-        polygon_WGS84 = list(polygon_WGS84)[0]
+    if isinstance(polygon_WGS84, shapely.geometry.MultiPolygon):
+        polygon_WGS84 = polygon_WGS84.geoms[0]
   
     assert type(polygon_WGS84) == shapely.geometry.polygon.Polygon
     
