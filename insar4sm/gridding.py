@@ -43,7 +43,7 @@ def create_grid_xy(Outdir:str, AOI:str, res:int=250)->tuple[gpd.GeoDataFrame,gpd
     AOI_wgs84 = gpd.read_file(AOI)
     AOI_wgs84.crs = "EPSG:4326"
     
-    polygon = AOI_wgs84.explode().geometry[0][0]
+    polygon = AOI_wgs84.explode(index_parts=False).geometry.iloc[0]
 
     # find the UTM projection to work with
     utm_crs_epsg = WGS84_to_UTM(polygon.centroid.x, polygon.centroid.y)

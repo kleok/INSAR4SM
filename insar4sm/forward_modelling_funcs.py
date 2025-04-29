@@ -258,7 +258,7 @@ def phase_closure_modelled_calc(SM:np.array, freq_GHz:float, clay_pct:float, san
                                              ifg_pairs.index(ifg2_checked),
                                              ifg_pairs.index(ifg3_checked)])
                         
-        triangle_idx_array = np.array(triangle_idx, dtype=np.int)
+        triangle_idx_array = np.array(triangle_idx, dtype=np.int32)
         triangle_idx_array = np.unique(triangle_idx_array, axis=0)
         
         

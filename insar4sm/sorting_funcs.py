@@ -17,7 +17,7 @@ def coh_dist_calc(acq_sorted:np.array, Coh_array:np.array)->pd.DataFrame:
     Returns:
         pd.DataFrame: Temporal distances and observed coherences
     """
-    acq_sorted = acq_sorted.astype(np.int)
+    acq_sorted = acq_sorted.astype(np.int32)
     n_bands = acq_sorted.shape[0]
     acquisition_dists = np.arange(1, n_bands)
     # acquisitions_sorted should be changed depending on the first image selection
@@ -121,7 +121,7 @@ def find_sm_sorting(Datetimes:list,
             similar_inds = np.argsort(coh_vector)[::-1][0:2]
             non_zero_similar_inds= [ind for ind in similar_inds if ind in non_zero_inds]
             coh_diff = np.abs(np.diff(coh_vector[non_zero_similar_inds]))
-            if coh_diff < 0.1:
+            if coh_diff.size > 0 and coh_diff[0] < 0.1:
                 sm_approx = np.random.choice(non_zero_similar_inds, 1, replace=False)[0]
                 #print('We picked: {}'.format(sm_approx))
                 

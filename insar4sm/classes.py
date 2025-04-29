@@ -18,12 +18,12 @@ from insar4sm.sorting_funcs import find_sm_sorting
 from insar4sm.coh_funcs import calc_SM_coherences
 from insar4sm.calc_SM_index import calc_burgi_sm_index
 from insar4sm.inversion import invert_sm
-from insar4sm.soil_funcs import get_soilgrids_value
+from insar4sm.Soilgrids.soil_funcs import get_soilgrids_value
 
 class INSAR4SM_stack:
     """Constructing and processing InSAR4SM stack
     """
-    def __init__(self, topstackDir, projectname, n_CPUs, AOI, meteo_file, ERA5_flag, sand, clay, orbit_time, export_dir):
+    def __init__(self, topstackDir, projectname, n_CPUs, AOI, meteo_file, sand, clay, orbit_time, days_back, export_dir):
         
         #----------------------Basic parms ------------
         self.projectname = projectname
@@ -31,7 +31,6 @@ class INSAR4SM_stack:
         self.export_dir = export_dir
         self.AOI = AOI
         self.meteo_file = meteo_file
-        self.ERA5_flag = ERA5_flag
         self.orbit_time = orbit_time
         self.buffer = 0.005
         self.CPUs = n_CPUs
@@ -51,7 +50,7 @@ class INSAR4SM_stack:
         if not os.path.exists(self.plot_dir): os.makedirs(self.plot_dir)
         
         #----------------------Processing parms ------------
-        self.days_back = 24
+        self.days_back = days_back
         self.dry_dates_ratio = 0.3  # percent of SAR acquisitions that are assumed dry (<0.04 m3/m3)
         
     def prepare_datasets(self):
@@ -98,16 +97,20 @@ class INSAR4SM_stack:
                 plt.savefig(os.path.join(self.plot_dir,band_name), dpi=100)
                 plt.close()
 
-    def get_dry_SARs(self):
-        """Finds the dry SAR acquisitions based on meteorological information
+    def get_dry_SARs(self, lowest_temp_K, tp_quantile):
+        """
+        Finds dry SAR acquisitions based on meteorological information
         """
         
-        self.meteo_df = convert_to_df(self.meteo_file, self.AOI, self.ERA5_flag)
+        self.meteo_df = convert_to_df(self.meteo_file, self.AOI)
         
-        self.dry_date_sel, self.dry_dates, self.meteo_sel_df = find_dry_SARs(self.meteo_df,
-                                                                          self.slc_datetimes,
-                                                                          self.days_back,
-                                                                          self.orbit_time)
+        self.dry_date_sel, self.dry_dates, self.meteo_sel_df = find_dry_SARs(meteo_df = self.meteo_df,
+                                                                          slc_datetimes = self.slc_datetimes,
+                                                                          days_back = self.days_back,
+                                                                          orbit_time = self.orbit_time,
+                                                                          lowest_temp_K = lowest_temp_K,
+                                                                          tp_quantile = tp_quantile)
+        
 
     def calc_insar_stack(self):
         """Computes interferometric observables.
@@ -192,7 +195,7 @@ class SM_point:
         self.freq_GHz = 5.405
         
         # read soil data
-        if type(insar4sm_stack.sand_data) == np.int:
+        if type(insar4sm_stack.sand_data) == np.int64:
             self.sand_pct = insar4sm_stack.sand_data
         elif type(insar4sm_stack.sand_data) == str:
             self.sand_pct = get_soilgrids_value(insar4sm_stack.sand_data, self.lon, self.lat)
@@ -200,7 +203,7 @@ class SM_point:
             raise("please provide an integer value for sand or a path to soilgrids tiff file (https://soilgrids.org/).")
     
     
-        if type(insar4sm_stack.clay_data) == np.int:
+        if type(insar4sm_stack.clay_data) == np.int64:
             self.clay_pct = insar4sm_stack.clay_data
         elif type(insar4sm_stack.clay_data) == str:
             self.clay_pct = get_soilgrids_value(insar4sm_stack.clay_data, self.lon, self.lat)
