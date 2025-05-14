@@ -214,7 +214,7 @@ def invert_sm(ph_DS:np.array,
 
     # create mask with short time spans of phase closures                                           
     
-    Mask_ph_closure = np.zeros(triangle_idx_array.shape[0], np.bool)
+    Mask_ph_closure = np.zeros(triangle_idx_array.shape[0], np.bool_)
     for ph_closure_ind, ph_closure_ints in enumerate(triangle_idx_array):
         int0 = ifg_pairs[ph_closure_ints[0]]
         int1 = ifg_pairs[ph_closure_ints[1]]
