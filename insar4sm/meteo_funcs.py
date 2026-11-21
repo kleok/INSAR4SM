@@ -27,11 +27,9 @@ def find_dry_SARs(meteo_df:pd.DataFrame,
     """
     # calculate accumulated precipitation
     
-    df2 = (meteo_df['tp'].shift().rolling(window=days_back, min_periods=1).sum().reset_index())
-    df2.index=pd.to_datetime(meteo_df.index)
-    
-    meteo_df['tp'] = df2['tp']
+    # time based window, so days_back are days for both hourly and daily meteo_df
     meteo_df.index = pd.to_datetime(meteo_df.index)
+    meteo_df['tp'] = meteo_df['tp'].shift().rolling(window='{}D'.format(days_back), min_periods=1).sum()
     meteo_df = meteo_df.at_time(orbit_time)
 
     # change datetime to date format
