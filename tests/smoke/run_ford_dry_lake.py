@@ -35,7 +35,8 @@ from insar4sm.sm_estimation_funcs import sm_estimation
 # ----------------------------- test case ------------------------------
 AOI_FILE = os.path.join(REPO_DIR, 'tests', 'data', 'FordDryLake_aoi.geojson')
 STATION = {'name': 'FordDryLake', 'lon': -115.09763, 'lat': 33.65470}
-TIME_START, TIME_END = '20251201T000000', '20260131T235959'
+# end on a full hour: ERA5-Land is hourly, so a 23:59:59 end looks like a missing hour on every rerun
+TIME_START, TIME_END = '20251201T000000', '20260131T230000'
 # ERA5-Land starts days_back earlier, so the first acquisitions get a full precipitation window
 DAYS_BACK = 24
 # ISMN station soil texture (sand 79 %, clay 11 %), as np.int64 like the notebook

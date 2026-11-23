@@ -48,3 +48,21 @@ The following fixes from PR #14 change soil moisture results compared with the p
 - AOI: 2 × 2 km around the station, in [tests/data/FordDryLake_aoi.geojson](tests/data/FordDryLake_aoi.geojson).
 - Smoke test (~2 months): [tests/smoke/run_ford_dry_lake.py](tests/smoke/run_ford_dry_lake.py), compared with ISMN 5 cm soil moisture.
 - Offline unit tests: `pytest tests/`.
+
+### Smoke test result (2026-11-23, NISAR + OPERA S1, 2025-12-01 → 2026-01-31): ✅ runs end to end
+Soil moisture in %, compared with ISMN 5 cm. Station cell = InSAR4SM grid cell containing the station.
+
+| Sensor | Track | Dates | RMSE station cell | R station cell | RMSE AOI mean | RMSE ERA5-Land | R ERA5-Land |
+|---|---|---|---|---|---|---|---|
+| NISAR | 005A | 5 | 13.0 | 0.28 | 6.2 | 5.2 | 0.84 |
+| NISAR | 085D | 5 | 4.1 | **0.94** | 7.0 | 6.8 | 0.98 |
+| S1 | 100D | 5 | **1.3** | 0.66 | 5.5 | 4.8 | 0.70 |
+| S1 | 166A | 5 | 5.0 | −0.10 | 3.3 | 6.5 | 0.87 |
+| S1 | 173D | 10 | 4.1 | −0.12 | 3.8 | 5.6 | 0.83 |
+
+This is a smoke test, not a validation (2 months, 5–10 dates, DS test off, 1 dry date). Findings to follow up:
+- [ ] **NaN dates in short stacks:** in the 5-date stacks, one or two dates are NaN in most cells (e.g. last date of S1 100D in 231/256 cells, 2nd date of NISAR 085D in 213/256). The 10-date stack (173D) has almost none. Check which step returns NaN (sorting / coherence / inversion) for short stacks.
+- [ ] Short stacks always use the "Coherence loss due to temporal decorrelation cannot be estimated" fallback: with 5 dates, `int(5 × 0.3) = 1` dry date, so there is no dry-date pair. `coh_funcs.py` now also catches the `ValueError` this raises.
+- [ ] NISAR 005A overestimates (13–33 % vs 8–10 % in situ). NISAR 085D catches the 2026-01-03 rain event (in situ 16 %), but overshoots it (24–31 %). → L-band calibration (§2).
+- [ ] S1 173D underestimates in December (3 % vs 8–9 %).
+- [ ] Rerun over 6–12 months with `DS_flag = True` for a real validation, and compare with the paper results in `Data/`.

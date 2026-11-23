@@ -149,7 +149,8 @@ def calc_SM_coherences(Datetimes:list,
                 gamma_0, tau, gamma_k = fit[0]
                 gamma_t_modelled = temp_coh__model(Dt, gamma_0, tau, gamma_k)
             # TypeError: fewer distinct dry-date time spans than model parameters (short stacks)
-            except (RuntimeError, TypeError):
+            # ValueError: fewer than two dry dates, so no dry-date pair to fit (very short stacks)
+            except (RuntimeError, TypeError, ValueError):
                 print("Coherence loss due to temporal decorrelation cannot be estimated!")
                 coh_sm[ind_DS, :, :]  = coh
                 coh_sm_dry = coh_sm[ind_DS, dry_bands_inds,:].copy()
