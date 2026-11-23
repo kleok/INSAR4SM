@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os, glob
+import os
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.linalg.lapack import zheevr 
+from scipy.linalg.lapack import zheevr
 
 #--------------------- INSAR4SM functionalities --------------
-from insar4sm.prep_slc_data import tops_2_vrt
 from insar4sm.prep_meteo import convert_to_df
 from insar4sm.meteo_funcs import find_dry_SARs
-from insar4sm.calc_int_data import calc_int_amp
 from insar4sm.gridding import create_grid_xy
 from insar4sm.DS_funcs import compute_Covar_Coh_weighted, get_DS_pixels, llh2xy
 from insar4sm.DS_funcs import find_best_pixels_ph, find_best_pixels_amp_fast, find_best_pixels_amp
@@ -21,13 +18,16 @@ from insar4sm.inversion import invert_sm
 from insar4sm.Soilgrids.soil_funcs import get_soilgrids_value
 
 class INSAR4SM_stack:
-    """Constructing and processing InSAR4SM stack
+    """Sensor-neutral base of an InSAR4SM stack.
+
+    Subclasses (e.g. insar4sm.geocoded_stack.GEOCODED_stack) implement prepare_datasets, plot and
+    calc_insar_stack. After calc_insar_stack the stack must provide slc_stack, amp_stack, lat_data,
+    lon_data, incLocal, hgt, perp_baseline_stack and primary_index, which SM_point uses.
     """
-    def __init__(self, topstackDir, projectname, n_CPUs, AOI, meteo_file, sand, clay, orbit_time, days_back, export_dir):
-        
+    def __init__(self, projectname, n_CPUs, AOI, meteo_file, sand, clay, orbit_time, days_back, export_dir):
+
         #----------------------Basic parms ------------
         self.projectname = projectname
-        self.topstackDir = topstackDir
         self.export_dir = export_dir
         self.AOI = AOI
         self.meteo_file = meteo_file
@@ -55,48 +55,14 @@ class INSAR4SM_stack:
         self.freq_GHz = 5.405  # Sentinel-1; geocoded stacks set their own sensor frequency
 
     def prepare_datasets(self):
-        """Prepares topstack datasets for InSAR4SM processing
+        """Selects the SAR acquisitions of the stack (sets slc_dates, slc_datetimes, start_index, end_index, nbands, n_dry_bands).
         """
-        
-        tops_2_vrt(indir = os.path.join(self.topstackDir,'merged/'),
-                   outdir = os.path.join(self.projectDir,'slcs'),
-                   stackdir = os.path.join(self.projectDir,'coreg_stack'),
-                   AOI_WGS84 = self.AOI,
-                   geomdir = os.path.join(self.projectDir,'geometry'))
-        
-        # Find the indices that corresponds to the defined Start_time and End_time
-        self.slc_filenames = glob.glob(os.path.join(self.projectDir,'slcs/*.vrt')) 
-        self.slc_datetimes = pd.to_datetime(sorted([ os.path.basename(slc_filename).split('.')[0] for slc_filename in self.slc_filenames]))
-        self.slc_dates = [slc_datetime.strftime('%Y%m%d') for slc_datetime in self.slc_datetimes]
-        self.Start_time = self.slc_dates[0]
-        self.End_time = self.slc_dates[-1]
-        self.Start_time_str =  self.Start_time.replace('-','')
-        self.End_time_str =  self.End_time.replace('-','')
-        self.start_index = self.slc_dates.index(self.Start_time_str)
-        self.end_index = self.slc_dates.index(self.End_time_str)+1
-        self.nbands = self.end_index - self.start_index
-        self.n_dry_bands = int(self.nbands*self.dry_dates_ratio)
+        raise NotImplementedError('implemented by the sensor-specific stack class')
 
     def plot(self):
-        """Plotting functionalites
+        """Plots the stack layers to plot_dir.
         """
-
-        for file in glob.glob(os.path.join(self.projectDir,'geometry')+'/*npy'):
-            temp_data=np.load(file)
-        
-            if len(temp_data.shape)==2:
-                rows=temp_data.shape[0]
-                columns=temp_data.shape[1]
-                min_dimension=min(rows,columns)
-                plot_y_size=2*int(rows/min_dimension)
-                plot_x_size=2*int(columns/min_dimension)
-                fig = plt.figure(figsize=(plot_x_size,plot_y_size))
-                plt.imshow(temp_data)
-                plt.colorbar(orientation="horizontal")
-                band_name=os.path.basename(file)[:-4]
-                plt.title(band_name)
-                plt.savefig(os.path.join(self.plot_dir,band_name), dpi=100)
-                plt.close()
+        raise NotImplementedError('implemented by the sensor-specific stack class')
 
     def get_dry_SARs(self, lowest_temp_K, tp_quantile):
         """
@@ -114,21 +80,10 @@ class INSAR4SM_stack:
         
 
     def calc_insar_stack(self):
-        """Computes interferometric observables.
+        """Loads the coregistered SLC stack and its geometry (see the class docstring for the attributes).
         """
-        
-        self.primary_index = calc_int_amp(input_dir = self.projectDir,
-                                         output_dir = self.WorkDir,
-                                         primary_date = self.dry_date_sel)
-        
-        self.lat_data=np.load(os.path.join(self.WorkDir,'geometry/lat.npy'))
-        self.lon_data=np.load(os.path.join(self.WorkDir,'geometry/lon.npy'))
-        self.incLocal=np.load(os.path.join(self.WorkDir,'geometry/incLocal.npy'))
-        self.perp_baseline_stack=np.load(os.path.join(self.WorkDir,'geometry/perp_baseline_stack.npy'))
-        self.hgt = np.load(os.path.join(self.WorkDir,'geometry/hgt.npy'))
-        self.slc_stack = np.load(os.path.join(self.WorkDir,'coreg_stack/slc_stack.npy'))[self.start_index:self.end_index,:,:]
-        self.amp_stack = np.abs(self.slc_stack)
-        
+        raise NotImplementedError('implemented by the sensor-specific stack class')
+
     def calc_grid(self, grid_size:int):
         """Calculates the centroids and polygons for each grid cell
 

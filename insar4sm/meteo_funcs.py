@@ -37,12 +37,13 @@ def find_dry_SARs(meteo_df:pd.DataFrame,
 
     # select only the datetimes that we have a Sentinel-1 acquisition
     test = pd.DataFrame(np.zeros(len(slc_datetimes)), columns=['test'])
-    test.index = slc_datetimes
+    test.index = pd.Index(pd.to_datetime(slc_datetimes).date)  # dates, like meteo_df.index
     meteo_sel_df = meteo_df.join(test, how='outer').dropna()
 
     # We dont want accumulated precipiration (24 days) bigger that 1mm
     precipitation_thres = np.quantile(meteo_sel_df['tp'].values, tp_quantile)
-    precipitation_mask = meteo_sel_df['tp'] < precipitation_thres
+    # <= so that dates without rain stay dry when most dates have no rain (quantile = 0, arid areas)
+    precipitation_mask = meteo_sel_df['tp'] <= precipitation_thres
     
     # We dont want temperature below 273.15 Kelvin
     temp_mask = meteo_sel_df['skt'] > lowest_temp_K

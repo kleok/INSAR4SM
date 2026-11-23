@@ -13,7 +13,7 @@ It requires as inputs the following data:
 - a meteorological dataset (e.g. from [ERA5-Land](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land?tab=overview) data)
 - a soil texture dataset (sand and clay) for your region of interest (e.g. from [soilgrids](https://soilgrids.org/))
 
-A [NASA Earthdata](https://urs.earthdata.nasa.gov) account is needed for the SAR data. An ISCE2 Topstack SLC stack can still be used with the `INSAR4SM_stack` class.
+A [NASA Earthdata](https://urs.earthdata.nasa.gov) account is needed for the SAR data. ISCE2 Topstack stacks are no longer supported (use a release before this change for that workflow).
 
 For each SAR acquisition a surface soil moisture map is provided.
 
@@ -22,7 +22,7 @@ This is research code provided to you "as is" with NO WARRANTIES OF CORRECTNESS.
 <img src="https://github.com/kleok/INSAR4SM/blob/main/figures/InSAR4SM_NA.png" width="900">
 
 ## 1. Installation
-The installation notes below are tested only on Linux. The Sentinel-1 processing (isce3/COMPASS) needs Linux; on Windows use [WSL2](https://learn.microsoft.com/windows/wsl/install) (`wsl --install -d Ubuntu`) and run everything inside it.
+The installation notes below are tested only on Linux. The local Sentinel-1 geocoding (isce3/COMPASS) needs Linux; on Windows use [WSL2](https://learn.microsoft.com/windows/wsl/install) (`wsl --install -d Ubuntu`) and run everything inside it.
 
 ### 1.1 Download InSAR4SM
 First you have to download InSAR4SM using the following command
@@ -31,11 +31,31 @@ First you have to download InSAR4SM using the following command
 
 ### 1.2 Create python environment for InSAR4SM
 
-InSAR4SM is written in Python3 and relies on several Python modules. You can install them by using ```INSAR4SM_env.yml``` file.
+InSAR4SM is written in Python3 and relies on several Python modules. Two environments are provided:
+
+| Environment file | Name | Use it for |
+|---|---|---|
+| `INSAR4SM_env.yml` | `insar4sm` | NISAR GSLC and Sentinel-1 **OPERA CSLC-S1** (North America). No isce3. |
+| `INSAR4SM_env_compass.yml` | `insar4sm_compass` | Everything above, plus local Sentinel-1 geocoding with COMPASS/isce3 (**global** coverage, Linux only). |
 
 ```conda env create -f INSAR4SM_env.yml```
 
-### 1.3 Set environmental variables (optional)
+Exact, tested package versions for Linux are in the lock files (`conda create -n insar4sm --file conda-linux-64.lock`, or `conda-compass-linux-64.lock` for the COMPASS environment).
+
+Sentinel-1 sources (`s1_source` in the notebook):
+- `'OPERA'`: [OPERA CSLC-S1](https://www.jpl.nasa.gov/go/opera/products/cslc-product-suite/) bursts already geocoded by JPL; only the AOI window is read. North America only.
+- `'COMPASS'`: single Sentinel-1 bursts downloaded from ASF and geocoded locally on the AOI with [COMPASS](https://github.com/opera-adt/COMPASS). Global.
+
+### 1.3 Run the tests (optional)
+
+```
+conda activate insar4sm
+pytest tests/
+```
+
+`tests/smoke/run_ford_dry_lake.py` runs a short end-to-end case at the Ford Dry Lake SCAN station (California), compared with ISMN in-situ soil moisture.
+
+### 1.4 Set environmental variables (optional)
 on GNU/Linux, append to .bashrc file:
 ```
 export InSAR4SM_HOME=~/InSAR4SM

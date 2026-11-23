@@ -2,11 +2,10 @@
 # -*- coding: utf-8 -*-
 """Geocoded SLC stacks (NISAR GSLC, Sentinel-1 CSLC from COMPASS) for InSAR4SM.
 
-The ISCE2 Topstack route (tops_2_vrt + calc_int_amp) ends with an SLC cube, lat/lon and
-incidence grids and a primary index. Geocoded SLCs already come coregistered on a map
-grid, so GEOCODED_stack builds the same attributes straight from a saved stack file and
-every downstream InSAR4SM step (DS selection, sorting, coherence model, inversion) runs
-unchanged.
+Geocoded SLCs come coregistered on a map grid, so GEOCODED_stack builds the SLC cube,
+lat/lon, incidence and height grids and the primary index straight from a saved stack
+file, and every downstream InSAR4SM step (DS selection, sorting, coherence model,
+inversion) runs on them.
 """
 from __future__ import annotations
 import os
@@ -240,8 +239,7 @@ class GEOCODED_stack(INSAR4SM_stack):
         mean_hours = np.mean(acq_datetimes.hour + acq_datetimes.minute / 60)
         orbit_time = '{:02d}:00:00'.format(int(np.round(mean_hours)) % 24)
 
-        super().__init__(topstackDir = None,
-                         projectname = projectname,
+        super().__init__(projectname = projectname,
                          n_CPUs = n_CPUs,
                          AOI = AOI,
                          meteo_file = meteo_file,
@@ -295,7 +293,7 @@ class GEOCODED_stack(INSAR4SM_stack):
             plt.close()
 
     def calc_insar_stack(self):
-        """Loads the geocoded SLC stack and its geometry (the Topstack route does this with calc_int_amp).
+        """Loads the geocoded SLC stack and its geometry.
         """
         self.primary_index = self.slc_dates.index(self.dry_date_sel)
 
