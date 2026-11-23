@@ -10,10 +10,11 @@ def vertical_wavenumber_calc(mv_pct:float,
                             freq_GHz:float = 5.405,
                             clay_pct:float  = 13.0,
                             sand_pct:float = 87.0,
-                            mu:float = 4*np.pi*10e-7 )-> np.complex:
+                            mu:float = 4*np.pi*1e-7,
+                            epsilon_0:float = 8.8541878128e-12)-> np.complex:
     r""" A simplified version for the calculation of complex wavenumber was used based on (Eq 3) of De Zan et al., 2018
 
-    .. math:: k = \sqrt{\omega^2\mu\epsilon}
+    .. math:: k = \sqrt{\omega^2\mu\epsilon_0\epsilon_r - k_x^2}
 
     Args:
         mv_pct (float): Volumetric moisture content (0-100)%
@@ -21,7 +22,8 @@ def vertical_wavenumber_calc(mv_pct:float,
         freq_GHz (float, optional): Operation frequency of SAR sensor in GHz. The default value is 5.405 which refers to Sentinel-1. Defaults to 5.405.
         clay_pct (float, optional): Clay mass fraction (0-100)%. Defaults to 13.0.
         sand_pct (float, optional): Sand mass fraction (0-100)%. Defaults to 87.0.
-        mu (float, optional): Dielectric permeability. Units are Newton/Ampere^2. Defaults to 4*np.pi*10e-7.
+        mu (float, optional): Magnetic permeability. Units are Newton/Ampere^2. Defaults to 4*np.pi*1e-7.
+        epsilon_0 (float, optional): Vacuum permittivity in F/m, since hallikainen_1985_calc returns the relative permittivity. Defaults to 8.8541878128e-12.
 
     Returns:
         np.complex: Vertical complex wavenumber
@@ -30,17 +32,17 @@ def vertical_wavenumber_calc(mv_pct:float,
         De Zan, F., Gomba, G., 2018. Vegetation and soil moisture inversion from SAR closure phases: First experiments and results. Remote Sens. Environ. 217, 562-572. https://doi.org/10.1016/j.rse.2018.08.034
     
     """
-    wmega = 2*np.pi*freq_GHz*10e9
+    wmega = 2*np.pi*freq_GHz*1e9
     epsilon = hallikainen_1985_calc(clay_pct, sand_pct, mv_pct, freq_GHz)
     if theta_inc is None:
         kx = 0.0
     else:
         c = 299792458 # m/s
-        freq_Hz = freq_GHz*10e9
+        freq_Hz = freq_GHz*1e9
         wavelength = c/freq_Hz
         kx = (2*np.pi*np.sin(np.radians(theta_inc)))/wavelength
-    
-    k = np.sqrt((wmega**2)*epsilon*mu-kx**2)
+
+    k = np.sqrt((wmega**2)*epsilon_0*epsilon*mu-kx**2)
     
     # Since the medium is lossy, k`z and ε` are complex numbers. 
     # The aforementioned equation has two solutions because of the ambiguity 

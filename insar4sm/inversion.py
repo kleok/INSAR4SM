@@ -117,7 +117,8 @@ def inversion(SM0:np.array,
     # constraints related to dry SAR dates
     sm_dry_thres = sm_dry + 1
     for sar_dry_ind in dry_bands_inds:
-        cons_list.append({'type': 'ineq', 'fun': lambda SM:  sm_dry_thres-SM[sar_dry_ind]})
+        # bind sar_dry_ind now (idx=...), otherwise every lambda uses the last index of the loop
+        cons_list.append({'type': 'ineq', 'fun': lambda SM, idx=sar_dry_ind:  sm_dry_thres-SM[idx]})
     
     cons_list.append({'type': 'eq', 'fun': lambda SM:  SM[dry_index] - sm_dry})
 
@@ -214,7 +215,7 @@ def invert_sm(ph_DS:np.array,
 
     # create mask with short time spans of phase closures                                           
     
-    Mask_ph_closure = np.zeros(triangle_idx_array.shape[0], np.bool)
+    Mask_ph_closure = np.zeros(triangle_idx_array.shape[0], bool)
     for ph_closure_ind, ph_closure_ints in enumerate(triangle_idx_array):
         int0 = ifg_pairs[ph_closure_ints[0]]
         int1 = ifg_pairs[ph_closure_ints[1]]

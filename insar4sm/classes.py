@@ -52,7 +52,8 @@ class INSAR4SM_stack:
         #----------------------Processing parms ------------
         self.days_back = days_back
         self.dry_dates_ratio = 0.3  # percent of SAR acquisitions that are assumed dry (<0.04 m3/m3)
-        
+        self.freq_GHz = 5.405  # Sentinel-1; geocoded stacks set their own sensor frequency
+
     def prepare_datasets(self):
         """Prepares topstack datasets for InSAR4SM processing
         """
@@ -192,8 +193,8 @@ class SM_point:
         self.ph_closure_dist = 6 # distance between sar acquisitions
         self.weight_factor = 1 # the weighting factor of coherence cost
         self.sm_dry_state = 2.8  # in m3/m3
-        self.freq_GHz = 5.405
-        
+        self.freq_GHz = insar4sm_stack.freq_GHz
+
         # read soil data
         if type(insar4sm_stack.sand_data) == np.int64:
             self.sand_pct = insar4sm_stack.sand_data
