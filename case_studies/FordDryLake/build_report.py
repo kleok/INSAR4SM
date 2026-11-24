@@ -253,7 +253,7 @@ def build():
     ])
     story.append(p('Reproduce', 'h2'))
     story.append(p('The software, this case study (notebook and result files) and the processing script are in the '
-                   'InSAR4SM repository (branch <i>geocoded</i>): https://github.com/kleok/INSAR4SM', 'body'))
+                   'InSAR4SM repository (release v2.0.0 and later): https://github.com/moistx-labs/INSAR4SM', 'body'))
     story.append(Paragraph(
         'conda env create -f INSAR4SM_env.yml &amp;&amp; conda activate insar4sm<br/>'
         'python tests/smoke/run_ford_dry_lake.py --project-dir RUN_DIR --ismn-csv ISMN_5cm.csv \\<br/>'
