@@ -50,10 +50,37 @@ def retrieve_ERA5_land_data(ERA5_variables:list,
                 # "download_format": "unarchived",
                 "download_format": "zip", }
         print(request_dict)
-        
-        c.retrieve('reanalysis-era5-land', request_dict, export_filename)
-        
+
+        # download to a temporary file, so an interrupted download is not taken as complete
+        c.retrieve('reanalysis-era5-land', request_dict, export_filename + '.part')
+        os.replace(export_filename + '.part', export_filename)
+
     return export_filename
+
+
+def get_bbox_cdsapi(AOI_filename:str)->list:
+    """ERA5-Land request area [N, W, S, E] around the AOI, on the 0.1 degree grid plus one cell margin.
+
+    Args:
+        AOI_filename (str): vector polygon file of the AOI.
+
+    Returns:
+        list: [lat_max, lon_min, lat_min, lon_max]
+    """
+    lon_min, lat_min, lon_max, lat_max = np.squeeze(gpd.read_file(AOI_filename).bounds.values)
+    half_res = 0.1
+    return [np.ceil(lat_max*10)/10 + half_res,
+            np.floor(lon_min*10)/10 - half_res,
+            np.floor(lat_min*10)/10 - half_res,
+            np.ceil(lon_max*10)/10 + half_res,]
+
+
+def request_filename(ERA5_dir:str, year_str:str, month_str:str, days_list:list, time_list:list, bbox_cdsapi_str:str)->str:
+    """Filename named after the request content, so the same request is found again on the next run."""
+    return os.path.join(ERA5_dir, 'ERA5_{}{}_d{}-{}_h{}-{}_{}.nc'.format(year_str, month_str,
+                                                                        days_list[0], days_list[-1],
+                                                                        time_list[0], time_list[-1],
+                                                                        bbox_cdsapi_str))
 
 
 def Get_ERA5_data(ERA5_variables:list,
@@ -77,20 +104,12 @@ def Get_ERA5_data(ERA5_variables:list,
         ERA5_datasets (list): ERA5 downloaded datasets
     """
 
-    lon_min, lat_min, lon_max, lat_max = np.squeeze(gpd.read_file(AOI_filename).bounds.values)
-    half_res = 0.1
-    bbox_cdsapi =  [np.ceil(lat_max*10)/10 + half_res,
-                    np.floor(lon_min*10)/10 - half_res,
-                    np.floor(lat_min*10)/10 - half_res,
-                    np.ceil(lon_max*10)/10 + half_res,]
-
-    request_start_time = start_datetime.strftime("%Y%m%dT%H%M%S")
-    request_end_time = end_datetime.strftime("%Y%m%dT%H%M%S")
+    bbox_cdsapi = get_bbox_cdsapi(AOI_filename)
     bbox_cdsapi_str='_'.join(str(round(e,3)) for e in bbox_cdsapi)
 
     ERA5_datasets = []
 
-    df = pd.date_range(start=start_datetime, end=end_datetime, freq='H').to_frame(name='Datetime')
+    df = pd.date_range(start=start_datetime, end=end_datetime, freq='h').to_frame(name='Datetime')
     
     df['year'] = df['Datetime'].dt.year
     df["year_str"] = ['{:02d}'.format(year) for year in df['year']]
@@ -111,9 +130,8 @@ def Get_ERA5_data(ERA5_variables:list,
     last_day_times_str = ['{:02d}'.format(last_day_time) for last_day_time in last_day_times]
     #print("Downloading precipitation for the flood date: {}".format(last_day_df.Datetime.strftime("%Y-%m-%d")))
 
-    export_filename = os.path.join(ERA5_dir,'ERA5_Last_day_{}_{}_{}.nc'.format(request_start_time,
-                                                                          request_end_time,
-                                                                          bbox_cdsapi_str))
+    export_filename = request_filename(ERA5_dir, last_day_df.year_str, last_day_df.month_str,
+                                       [last_day_df.day_str], last_day_times_str, bbox_cdsapi_str)
 
     last_day_dataset = retrieve_ERA5_land_data(ERA5_variables = ERA5_variables,
                                                 year_str = last_day_df.year_str,
@@ -138,11 +156,8 @@ def Get_ERA5_data(ERA5_variables:list,
             days_request = np.unique(df_month['day_str']).tolist()
             hours_request = np.unique(df_month['hour_str']).tolist()
             
-            export_filename = os.path.join(ERA5_dir,'ERA5_{}_{}_{}_{}_{}.nc'.format(month_request,
-                                                                                    year_request,
-                                                                                    request_start_time,
-                                                                                    request_end_time,
-                                                                                    bbox_cdsapi_str))
+            export_filename = request_filename(ERA5_dir, year_request, month_request,
+                                               days_request, hours_request, bbox_cdsapi_str)
 
             monthly_dataset = retrieve_ERA5_land_data(ERA5_variables = ERA5_variables,
                                                     year_str = year_request,

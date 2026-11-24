@@ -24,19 +24,16 @@ def read_grib_from_zip(zip_path, grib_filename):
             # Extract GRIB file to temporary directory
             z.extract(grib_filename, path=temp_dir)
 
-            # Read all GRIB subsets
-            datasets = cfgrib.open_datasets(temp_grib_path)
+            # Read all GRIB subsets on the valid time. Accumulated variables (tp) are otherwise
+            # indexed by forecast reference time and step, instantaneous ones by time
+            datasets = cfgrib.open_datasets(temp_grib_path, backend_kwargs={'time_dims': ('valid_time',)})
 
-            # Ensure time consistency
-            for ds in datasets:
-                if 'time' in ds:
-                    ds['time'] = pd.to_datetime(ds['time'].values)
+            for i, ds in enumerate(datasets):
+                if 'valid_time' not in ds.dims: # single time request
+                    ds = ds.expand_dims('valid_time')
+                datasets[i] = ds.drop_vars(['time', 'step'], errors='ignore').rename({'valid_time': 'time'})
 
-            # Merge datasets to resolve time conflicts
             merged_ds = xr.merge(datasets, compat="override", join="outer")
-
-            if "step" in merged_ds.dims:
-                merged_ds = merged_ds.mean(dim="step")
             return merged_ds.load()
         
 
@@ -80,6 +77,16 @@ def merge_ERA5_land_datasets(ERA5_datasets, ERA5_merged_filename):
     # Step 3: Sort by time
     merged = merged.sortby('time')
 
+    # Step 4: ERA5-Land tp is accumulated since 00 UTC (01 UTC holds the first hour, 00 UTC the whole
+    # previous day), so subtract the previous hour. Hours without the previous hour become NaN
+    # https://confluence.ecmwf.int/display/CKB/ERA5-Land%3A+data+documentation#heading-Accumulations
+    times = merged['time'].values
+    tp_acc = merged['tp'].values
+    tp_prev = merged['tp'].reindex(time=times - np.timedelta64(1, 'h')).values
+    first_hour = pd.DatetimeIndex(times).hour == 1
+    tp_hourly = np.where(first_hour[:, None, None], tp_acc, tp_acc - tp_prev)
+    merged['tp'] = (merged['tp'].dims, np.clip(tp_hourly, 0, None))
+
     if 'expver' in merged.dims: # it contains a mix of ERA5 and ERA5T data 
         # https://confluence.ecmwf.int/pages/viewpage.action?pageId=173385064
         merged = merged.reduce(np.nansum, 'expver')
@@ -100,14 +107,15 @@ def merge_ERA5_land_datasets(ERA5_datasets, ERA5_merged_filename):
             },
     )
 
-    ERA5_xarray_save.skt.attrs["long_name"] = 'Snow cover'
-    ERA5_xarray_save.skt.attrs["units"] = '%'
+    ERA5_xarray_save.skt.attrs["long_name"] = 'Skin temperature'
+    ERA5_xarray_save.skt.attrs["units"] = 'K'
 
     ERA5_xarray_save.swvl1.attrs["long_name"] = 'Volumetric soil water layer 1'
     ERA5_xarray_save.swvl1.attrs["units"] = 'm**3 m**-3'
 
-    ERA5_xarray_save.tp.attrs["long_name"] = 'Total precipitation'
-    ERA5_xarray_save.tp.attrs["units"] = 'mm'
+    ERA5_xarray_save.tp.attrs["long_name"] = 'Hourly total precipitation'
+    # checked by ERA5.get_download_dates, merged files of older versions hold daily accumulated tp
+    ERA5_xarray_save.tp.attrs["units"] = 'mm/hour'
 
     ERA5_xarray_save.x.attrs['long_name'] = 'longitude'
     ERA5_xarray_save.x.attrs['units'] = 'degrees'

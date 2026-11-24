@@ -48,7 +48,7 @@ def convert_to_df(meteo_xr_filename:str, AOI_File:str) -> pd.DataFrame:
     pixel_gdf = gpd.GeoDataFrame(pixel_centers, columns=["x", "y"], geometry=pixel_polygons, crs="EPSG:4326")
 
     # Intersect with AOI
-    intersecting_pixels = pixel_gdf[pixel_gdf.intersects(gpd.read_file(AOI_File).unary_union)]
+    intersecting_pixels = pixel_gdf[pixel_gdf.intersects(gpd.read_file(AOI_File).union_all())]
 
     # Get matching x/y values
     x_selected = np.unique(intersecting_pixels["x"])
