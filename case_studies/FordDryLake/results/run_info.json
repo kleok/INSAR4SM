@@ -1,0 +1,23 @@
+{
+  "aoi": "tests/data/FordDryLake_aoi.geojson",
+  "period": [
+    "20251122T000000",
+    "20261111T230000"
+  ],
+  "sensors": [
+    "S1",
+    "NISAR"
+  ],
+  "s1_source": "OPERA",
+  "ds_flag": true,
+  "min_acquisitions": 10,
+  "stack_files": [
+    "NISAR_005A.npz",
+    "NISAR_085D.npz",
+    "NISAR_106A.npz",
+    "S1_100D.npz",
+    "S1_166A.npz",
+    "S1_173D.npz"
+  ],
+  "runtime_min": 149.77961938333334
+}
