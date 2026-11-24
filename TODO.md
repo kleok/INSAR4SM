@@ -81,7 +81,7 @@ Soil moisture in %, compared with ISMN 5 cm. Valid cells = fraction of grid cell
 | S1 | 166A | 31 | 0.99 | 2.8 | 0.92 | 1.9 | 0.91 | 4.4 | 0.78 |
 | S1 | 173D | 61 | 0.99 | 1.9 | 0.82 | 1.5 | 0.94 | 3.7 | 0.84 |
 
-- InSAR4SM beats ERA5-Land in RMSE on every track: AOI mean 1.1–2.6 % vs 3.5–4.5 %. Its AOI-mean R is comparable or better: 0.86–0.97 vs 0.75–0.92.
+- InSAR4SM has a lower RMSE than ERA5-Land on every track, largely because of ERA5-Land's dry bias: AOI mean 1.1–2.6 % vs 3.5–4.5 %. Its AOI-mean R is comparable or better: 0.86–0.97 vs 0.75–0.92.
 - Sentinel-1 (C-band) and NISAR (L-band) both work with the current (C-band-tuned) parameters. The L-band calibration (§2) is still worth doing (NISAR 085D station cell R 0.34).
 - [ ] **NISAR 106A**: frame 018 covers only 2 % of the AOI on every date (the AOI is at the frame edge), so no estimate. Skip tracks whose stack covers less than a minimum fraction of the AOI (e.g. 50 %) before the inversion, instead of inverting an empty stack.
 - [ ] NISAR 157D was skipped (9 acquisitions < 10).
@@ -89,9 +89,12 @@ Soil moisture in %, compared with ISMN 5 cm. Valid cells = fraction of grid cell
 - [x] Plots: time series of InSAR4SM per track vs ISMN and ERA5-Land, plus a map of the AOI estimates → done in the case study (below).
 
 ### Case study (2026-11-24): ✅ [case_studies/FordDryLake/](case_studies/FordDryLake/)
-Built from the 12-month run: a 6-page PDF report (`FordDryLake_case_study.pdf`) and a notebook (`FordDryLake_case_study.ipynb`) that runs from the small files in `results/` (~260 kB). Pooled over the 5 tracks (172 estimates): InSAR4SM RMSE **1.7 %**, bias −0.9 %, R **0.90**, vs ERA5-Land RMSE 4.0 %, bias −3.4 %, R 0.84. That's an estimate on 137 days, with a median gap of 2 days.
-- [ ] Update the repository link in the report and notebook (currently "branch *geocoded*") once `geocoded` is merged into `main`.
+Built from the 12-month run: a 6-page PDF report (`FordDryLake_case_study.pdf`) and a notebook (`FordDryLake_case_study.ipynb`) that runs from `results/` and the user's own ISMN file. Pooled over the 5 tracks (172 estimates): InSAR4SM RMSE **1.7 %**, bias −0.9 %, R **0.90**, vs ERA5-Land RMSE 4.0 %, bias −3.4 %, R 0.84. That's an estimate on 137 days, with a median gap of 2 days. Without the mean biases: 1.4 % vs 2.1 %. Wet dates (in situ ≥ 6 %): ERA5-Land R 0.89 vs InSAR4SM 0.73.
+- [x] Repository link in the report updated to moistx-labs.
 - [ ] `build_report.py` needs `reportlab`, which is not in either environment. Add it to `INSAR4SM_env.yml`, or keep it as an optional `pip install reportlab`.
-- [ ] `results/` contains ISMN in-situ values (at the acquisition times and as daily means). Confirm this is fine under the ISMN data policy before publishing (SCAN data is public; ISMN asks for citation).
+- [x] ISMN values removed from `results/` (the ISMN terms forbid redistribution). Every user downloads them with their own account.
+- [ ] Dry state prescribed at 2.8 % (dry dates ≤ 3.8 %): test the sensitivity of the results to it, also with a soil-map texture instead of the station texture.
+- [ ] Validate the spatial pattern of the maps (only one station here).
+- [ ] `insar4sm/ismn.py` was tested on synthetic `.stm` files only; check it on a real ISMN download.
 - [ ] When `prepare_results.py` or `case_study.py` change, rebuild with:
-  `python case_studies/FordDryLake/prepare_results.py ...`, `jupyter nbconvert --execute --inplace ...ipynb` and `python case_studies/FordDryLake/build_report.py`.
+  `python case_studies/FordDryLake/prepare_results.py ...`, `jupyter nbconvert --execute --inplace ...ipynb` and `python case_studies/FordDryLake/build_report.py ISMN_FILE`.

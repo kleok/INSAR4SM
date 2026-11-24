@@ -53,11 +53,11 @@ conda activate insar4sm
 pytest tests/
 ```
 
-`tests/smoke/run_ford_dry_lake.py` runs a short end-to-end case at the Ford Dry Lake SCAN station (California), compared with ISMN in-situ soil moisture.
+`tests/smoke/run_ford_dry_lake.py` runs a short end-to-end case at the Ford Dry Lake SCAN station (California), compared with in-situ soil moisture that you download with your own [ISMN](https://ismn.earth) account (ISMN data cannot be redistributed).
 
 ### Case study
 
-[**Ford Dry Lake, California (Nov 2025 – Nov 2026)**](case_studies/FordDryLake/): one year of NISAR and Sentinel-1 soil moisture compared with in-situ data. InSAR4SM reaches 1.7 % RMSE (R 0.90), against 4.0 % (R 0.84) for ERA5-Land, with an estimate every ~2 days at 125 m spacing. The folder has a [PDF report](case_studies/FordDryLake/FordDryLake_case_study.pdf) and a [notebook](case_studies/FordDryLake/FordDryLake_case_study.ipynb).
+[**Ford Dry Lake, California (Nov 2025 – Nov 2026)**](case_studies/FordDryLake/): one year of NISAR and Sentinel-1 soil moisture compared with in-situ data. InSAR4SM reaches 1.7 % RMSE (R 0.90), against 4.0 % (R 0.84) for ERA5-Land; without their mean biases the errors are 1.4 % and 2.1 %. The case study also describes the limits: the dry state is prescribed, ERA5-Land follows wet dates better, and the NISAR results are preliminary. The folder has a [PDF report](case_studies/FordDryLake/FordDryLake_case_study.pdf) and a [notebook](case_studies/FordDryLake/FordDryLake_case_study.ipynb).
 
 ### 1.4 Set environmental variables (optional)
 on GNU/Linux, append to .bashrc file:
@@ -93,9 +93,9 @@ For the NISAR (L-band) work, please also cite:
 - **Giorgos Katsamas** ([@GiorgosKatsamas](https://github.com/GiorgosKatsamas)): NISAR GSLC and Sentinel-1 geocoded-SLC workflow, ERA5-Land improvements and model fixes ([#14](https://github.com/moistx-labs/INSAR4SM/pull/14)). Thank you, Giorgos!
 
 ## 5. Acknowledgements
-<a href="https://github.com/moistx-labs"><img src="figures/moistx_logo.png" width="180" alt="moistX"></a>
+<a href="https://moistx.com/"><img src="figures/moistx_logo.png" width="180" alt="moistX"></a>
 
-The development of InSAR4SM is supported by [moistX](https://github.com/moistx-labs).
+The development of InSAR4SM is supported by [moistX](https://moistx.com/).
 
 ## 6. Contact us
 Feel free to open an issue, comment or pull request. We would like to listen to your thoughts and your recommendations. Any help is very welcome!
