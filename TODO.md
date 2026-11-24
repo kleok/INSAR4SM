@@ -61,8 +61,37 @@ Soil moisture in %, compared with ISMN 5 cm. Station cell = InSAR4SM grid cell c
 | S1 | 173D | 10 | 4.1 | −0.12 | 3.8 | 5.6 | 0.83 |
 
 This is a smoke test, not a validation (2 months, 5–10 dates, DS test off, 1 dry date). Findings to follow up:
-- [ ] **NaN dates in short stacks:** in the 5-date stacks, one or two dates are NaN in most cells (e.g. last date of S1 100D in 231/256 cells, 2nd date of NISAR 085D in 213/256). The 10-date stack (173D) has almost none. Check which step returns NaN (sorting / coherence / inversion) for short stacks.
+- [x] ~~**NaN dates in short stacks**~~: short stacks only. The 12-month stacks have 83–100 % valid cells (see below).
+  Original observation: in the 5-date stacks, one or two dates are NaN in most cells (e.g. last date of S1 100D in 231/256 cells, 2nd date of NISAR 085D in 213/256). The 10-date stack (173D) has almost none. Check which step returns NaN (sorting / coherence / inversion) for short stacks.
 - [ ] Short stacks always use the "Coherence loss due to temporal decorrelation cannot be estimated" fallback: with 5 dates, `int(5 × 0.3) = 1` dry date, so there is no dry-date pair. `coh_funcs.py` now also catches the `ValueError` this raises.
 - [ ] NISAR 005A overestimates (13–33 % vs 8–10 % in situ). NISAR 085D catches the 2026-01-03 rain event (in situ 16 %), but overshoots it (24–31 %). → L-band calibration (§2).
 - [ ] S1 173D underestimates in December (3 % vs 8–9 %).
-- [ ] Rerun over 6–12 months with `DS_flag = True` for a real validation, and compare with the paper results in `Data/`.
+- [x] Rerun over 12 months with `DS_flag = True` (see below).
+
+### Validation run (2026-11-24, 12 months 2025-11-22 → 2026-11-11, DS test on, NISAR + OPERA S1): ✅
+Command: `run_ford_dry_lake.py --time-start 20251122T000000 --time-end 20261111T230000 --ds --min-acquisitions 10` (~150 min, mostly downloads).
+Soil moisture in %, compared with ISMN 5 cm. Valid cells = fraction of grid cells with an estimate on every date.
+
+| Sensor | Track | Dates | Valid cells | RMSE station cell | R station cell | RMSE AOI mean | R AOI mean | RMSE ERA5-Land | R ERA5-Land |
+|---|---|---|---|---|---|---|---|---|---|
+| NISAR | 005A | 26 | 1.00 | 3.0 | 0.88 | 2.6 | 0.86 | 3.9 | 0.92 |
+| NISAR | 085D | 25 | 1.00 | 3.5 | 0.34 | **1.1** | **0.94** | 4.5 | 0.75 |
+| NISAR | 106A | 23 | 0.00 | – | – | – | – | 3.4 | 0.81 |
+| S1 | 100D | 29 | 0.83 | **1.4** | **0.93** | **1.1** | **0.97** | 3.5 | 0.84 |
+| S1 | 166A | 31 | 0.99 | 2.8 | 0.92 | 1.9 | 0.91 | 4.4 | 0.78 |
+| S1 | 173D | 61 | 0.99 | 1.9 | 0.82 | 1.5 | 0.94 | 3.7 | 0.84 |
+
+- InSAR4SM beats ERA5-Land in RMSE on every track: AOI mean 1.1–2.6 % vs 3.5–4.5 %. Its AOI-mean R is comparable or better: 0.86–0.97 vs 0.75–0.92.
+- Sentinel-1 (C-band) and NISAR (L-band) both work with the current (C-band-tuned) parameters. The L-band calibration (§2) is still worth doing (NISAR 085D station cell R 0.34).
+- [ ] **NISAR 106A**: frame 018 covers only 2 % of the AOI on every date (the AOI is at the frame edge), so no estimate. Skip tracks whose stack covers less than a minimum fraction of the AOI (e.g. 50 %) before the inversion, instead of inverting an empty stack.
+- [ ] NISAR 157D was skipped (9 acquisitions < 10).
+- [ ] Compare with the paper results in `Data/*FordDryLake*.obj` (S1 orbits 100/166/173).
+- [x] Plots: time series of InSAR4SM per track vs ISMN and ERA5-Land, plus a map of the AOI estimates → done in the case study (below).
+
+### Case study (2026-11-24): ✅ [case_studies/FordDryLake/](case_studies/FordDryLake/)
+Built from the 12-month run: a 6-page PDF report (`FordDryLake_case_study.pdf`) and a notebook (`FordDryLake_case_study.ipynb`) that runs from the small files in `results/` (~260 kB). Pooled over the 5 tracks (172 estimates): InSAR4SM RMSE **1.7 %**, bias −0.9 %, R **0.90**, vs ERA5-Land RMSE 4.0 %, bias −3.4 %, R 0.84. That's an estimate on 137 days, with a median gap of 2 days.
+- [ ] Update the repository link in the report and notebook (currently "branch *geocoded*") once `geocoded` is merged into `main`.
+- [ ] `build_report.py` needs `reportlab`, which is not in either environment. Add it to `INSAR4SM_env.yml`, or keep it as an optional `pip install reportlab`.
+- [ ] `results/` contains ISMN in-situ values (at the acquisition times and as daily means). Confirm this is fine under the ISMN data policy before publishing (SCAN data is public; ISMN asks for citation).
+- [ ] When `prepare_results.py` or `case_study.py` change, rebuild with:
+  `python case_studies/FordDryLake/prepare_results.py ...`, `jupyter nbconvert --execute --inplace ...ipynb` and `python case_studies/FordDryLake/build_report.py`.
