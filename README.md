@@ -1,4 +1,4 @@
-# <img src="https://github.com/kleok/INSAR4SM/blob/main/figures/insar4sm_logo.png" width="58"> InSAR4SM - Interferometric Synthetic Aperture Radar for Soil Moisture
+# <img src="figures/insar4sm_logo.png" width="58"> InSAR4SM - Interferometric Synthetic Aperture Radar for Soil Moisture
 
 ## Introduction
 
@@ -19,7 +19,7 @@ For each SAR acquisition a surface soil moisture map is provided.
 
 This is research code provided to you "as is" with NO WARRANTIES OF CORRECTNESS. Use at your own risk.
 
-<img src="https://github.com/kleok/INSAR4SM/blob/main/figures/InSAR4SM_NA.png" width="900">
+<img src="figures/InSAR4SM_NA.png" width="900">
 
 ## 1. Installation
 The installation notes below are tested only on Linux. The local Sentinel-1 geocoding (isce3/COMPASS) needs Linux; on Windows use [WSL2](https://learn.microsoft.com/windows/wsl/install) (`wsl --install -d Ubuntu`) and run everything inside it.
@@ -77,12 +77,25 @@ InSAR4SM provide soil moisture estimations using interferometric observables, me
 - Calculation of coherence information due to soil moisture variations.
 - Soil moisture inversion using De Zan`s model.
 
-Please start with the jupyter notebook example [here](https://github.com/kleok/INSAR4SM/blob/main/INSAR4SM_app.ipynb)
+Please start with the jupyter notebook example [here](INSAR4SM_app.ipynb)
 
 ## 3. Documentation and citation
 Algorithms implemented in the software are described in detail at our publication. If InSAR4SM was useful for you, we encourage you to cite the following work.
 
 - Karamvasis, K., & Karathanassi, V. (2023). Soil moisture estimation from Sentinel-1 interferometric observations over arid regions. Computers & Geosciences, 178, 105410. [here](https://doi.org/10.1016/j.cageo.2023.105410)
 
-## 4. Contact us
+For the NISAR (L-band) work, please also cite:
+
+- <!-- TODO: full citation (authors, year, title, venue, DOI) --> NISAR soil moisture with InSAR4SM. [PDF](https://drive.google.com/file/d/1nKk2JU313nhIxNLPmR2ZAa3G-Cnvtlm3/view?usp=drive_link)
+
+## 4. Contributors
+- **Kleanthis Karamvasis**: author and maintainer.
+- **Giorgos Katsamas** ([@GiorgosKatsamas](https://github.com/GiorgosKatsamas)): NISAR GSLC and Sentinel-1 geocoded-SLC workflow, ERA5-Land improvements and model fixes ([#14](https://github.com/kleok/INSAR4SM/pull/14)). Thank you, Giorgos!
+
+## 5. Acknowledgements
+<a href="https://github.com/moistx-labs"><img src="figures/moistx_logo.png" width="180" alt="moistX"></a>
+
+The development of InSAR4SM is supported by [moistX](https://github.com/moistx-labs).
+
+## 6. Contact us
 Feel free to open an issue, comment or pull request. We would like to listen to your thoughts and your recommendations. Any help is very welcome!
