@@ -1,8 +1,10 @@
 """Statistics and figures of the Ford Dry Lake case study (shared by the notebook and the PDF report).
 
-Reads only the small CSV files in results/ (see prepare_results.py).
+Reads the small files in results/ (InSAR4SM and ERA5-Land, see prepare_results.py) and the in-situ
+file that the user downloaded from https://ismn.earth. ISMN data are not part of this repository.
 """
 import os
+import sys
 import json
 
 import numpy as np
@@ -14,6 +16,11 @@ from pyproj import Transformer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RESULTS_DIR = os.path.join(HERE, 'results')
+sys.path.insert(0, os.path.abspath(os.path.join(HERE, '..', '..')))
+from insar4sm.ismn import read_ismn
+
+DRY_STATE = 2.8          # % vol., SM_point.sm_dry_state; dry dates are capped at DRY_STATE + 1
+WET_THRESHOLD = 6.0      # % vol. in situ, splits dry and wet dates (chosen after the run)
 FIGURES_DIR = os.path.join(HERE, 'figures')
 
 STATION = {'name': 'Ford Dry Lake (SCAN)', 'lon': -115.09763, 'lat': 33.65470}
@@ -48,12 +55,24 @@ def set_style():
 
 
 # ---------------------------------------------------------------- data
-def load_results(results_dir=RESULTS_DIR):
-    """Returns a dict with tracks, comparisons, estimates, daily reference and run info."""
+def load_results(ismn_file, results_dir=RESULTS_DIR):
+    """Returns a dict with tracks, comparisons, estimates, daily reference and run info.
+
+    ismn_file: 5 cm soil moisture of station FordDryLake (network SCAN), downloaded with your own
+    ISMN account (.stm, or CSV with columns date_time, soil_moisture).
+    """
+    if not ismn_file or not os.path.exists(ismn_file):
+        raise FileNotFoundError('ISMN file not found. Download station FordDryLake (network SCAN, 5 cm) from '
+                                'https://ismn.earth with your own account and pass its path.')
+    ismn = read_ismn(ismn_file) * 100
     tracks = pd.read_csv(os.path.join(results_dir, 'tracks.csv'), dtype={'track': str})
-    comp = pd.read_csv(os.path.join(results_dir, 'comparisons.csv'), parse_dates=['date'], dtype={'track': str})
+    comp = pd.read_csv(os.path.join(results_dir, 'insar4sm_era5.csv'), parse_dates=['time_utc'], dtype={'track': str})
+    # in-situ value at (or last before) the acquisition hour
+    comp['insitu_5cm'] = ismn.asof(pd.DatetimeIndex(comp['time_utc'])).values
+    comp['date'] = comp['time_utc'].dt.normalize()
     est = pd.read_csv(os.path.join(results_dir, 'estimates.csv.gz'), parse_dates=['date'], dtype={'track': str})
-    daily = pd.read_csv(os.path.join(results_dir, 'daily_reference.csv'), parse_dates=['date'], index_col='date')
+    daily = pd.read_csv(os.path.join(results_dir, 'era5_daily.csv'), parse_dates=['date'], index_col='date')
+    daily['ismn_5cm_pct'] = ismn.resample('D').mean().reindex(daily.index)
     with open(os.path.join(results_dir, 'run_info.json')) as f:
         run_info = json.load(f)
     # tracks with an estimate (a track whose frame barely touches the AOI has none)
@@ -92,6 +111,24 @@ def metrics_table(data):
     return pd.DataFrame(rows)
 
 
+def wetness_table(data):
+    """Scores on dry and wet dates (in situ below / above WET_THRESHOLD), all tracks pooled."""
+    comp = data['comp'].dropna(subset=['insar4sm_aoi_mean'])
+    rows = []
+    for label, g in [('in situ < {:.0f} %'.format(WET_THRESHOLD), comp[comp.insitu_5cm < WET_THRESHOLD]),
+                     ('in situ >= {:.0f} %'.format(WET_THRESHOLD), comp[comp.insitu_5cm >= WET_THRESHOLD]), ('all dates', comp)]:
+        for product, col in [('InSAR4SM (AOI mean)', 'insar4sm_aoi_mean'), ('ERA5-Land', 'era5_swvl1')]:
+            rows.append({'dates': label, 'product': product, **scores(g['insitu_5cm'], g[col])})
+    return pd.DataFrame(rows)
+
+
+def dry_state_share(data):
+    """Share of the AOI means close to the prescribed dry state (DRY_STATE -0.3 to +1 %), per sensor."""
+    comp = data['comp'].dropna(subset=['insar4sm_aoi_mean'])
+    near = comp['insar4sm_aoi_mean'].between(DRY_STATE - 0.3, DRY_STATE + 1)
+    return near.groupby(comp['sensor']).mean()
+
+
 def headline(data):
     """Key numbers for the summary."""
     m = metrics_table(data)
@@ -103,6 +140,8 @@ def headline(data):
             'r_insar': allt.loc['InSAR4SM (AOI mean)', 'R'],
             'rmse_era5': allt.loc['ERA5-Land', 'RMSE'],
             'r_era5': allt.loc['ERA5-Land', 'R'],
+            'ubrmse_insar': allt.loc['InSAR4SM (AOI mean)', 'ubRMSE'],
+            'ubrmse_era5': allt.loc['ERA5-Land', 'ubRMSE'],
             'n_obs': int(allt.loc['InSAR4SM (AOI mean)', 'N']),
             'n_tracks': len(data['valid_tracks']),
             'n_dates': len(dates), 'median_gap_days': float(np.median(gaps)),
@@ -143,7 +182,7 @@ def fig_overview_timeseries(data, save=True):
         ax.scatter(g['date'], g['insar4sm_aoi_mean'], s=22, color=st['color'], marker=st['marker'],
                    edgecolor=SURFACE, linewidth=0.8, label=st['label'] + ', AOI mean', zorder=4)
     ax.set_ylabel('Volumetric soil moisture (%)')
-    ax.set_ylim(0, max(30, float(np.nanmax(daily['ismn_5cm_pct'])) + 2))
+    ax.set_ylim(0, float(np.nanmax(daily[['ismn_5cm_pct', 'era5_swvl1_pct']].values)) + 2)
     ax.legend(loc='upper right', ncol=1)
     fig.autofmt_xdate(rotation=0, ha='center')
     return _save(fig, 'fig1_overview_timeseries', save)
@@ -167,7 +206,7 @@ def fig_tracks_timeseries(data, save=True):
         s_i, s_e = m.loc[(label, 'InSAR4SM (AOI mean)')], m.loc[(label, 'ERA5-Land')]
         ax.set_title('{}  ·  {} dates  ·  InSAR4SM RMSE {:.1f} %, R {:.2f}  |  ERA5-Land RMSE {:.1f} %, R {:.2f}'.format(
             label, int(s_i.N), s_i.RMSE, s_i.R, s_e.RMSE, s_e.R), fontsize=9, pad=4)
-        ax.set_ylim(0, 30)
+        ax.set_ylim(0, 35)
     np.atleast_1d(axes)[0].legend(loc='upper right', ncol=3)
     fig.supylabel('Volumetric soil moisture (%)', fontsize=9, color=INK_2, x=0.07)
     return _save(fig, 'fig2_tracks_timeseries', save)
