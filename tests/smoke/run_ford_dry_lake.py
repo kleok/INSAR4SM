@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-to-end smoke test of InSAR4SM on the Ford Dry Lake SCAN station (2 x 2 km AOI, ~2 months).
+"""End-to-end run of InSAR4SM on the Ford Dry Lake SCAN station (2 x 2 km AOI), compared with ISMN.
 
 Downloads ERA5-Land (CDS, ~/.cdsapirc), NISAR GSLC windows and Sentinel-1 bursts (NASA Earthdata,
 ~/.netrc), builds one stack per track, inverts soil moisture and compares it with the ISMN
@@ -7,9 +7,14 @@ Downloads ERA5-Land (CDS, ~/.cdsapirc), NISAR GSLC windows and Sentinel-1 bursts
 
 The run is resumable: downloaded data are reused on a rerun.
 
-Usage:
+Smoke test (defaults: 2 months, DS test off):
     python tests/smoke/run_ford_dry_lake.py --project-dir /media/kle/cropg_ssd1/INSAR4SM_tests/FordDryLake \
         --ismn-csv /path/to/sm_FordDryLake_..._0.0508_0.0508.csv [--sensors S1 NISAR]
+
+Validation (12 months, DS test on):
+    python tests/smoke/run_ford_dry_lake.py --project-dir /media/kle/cropg_ssd1/INSAR4SM_tests/FordDryLake_12m \
+        --ismn-csv /path/to/sm_FordDryLake_..._0.0508_0.0508.csv \
+        --time-start 20251122T000000 --time-end 20261111T230000 --ds --min-acquisitions 10
 """
 import os
 import sys
@@ -56,6 +61,10 @@ def parse_args():
     parser.add_argument('--s1-source', default='OPERA', choices=['OPERA', 'COMPASS'],
                         help='OPERA: JPL geocoded bursts, North America, no isce3. COMPASS: local geocoding, global, needs isce3')
     parser.add_argument('--n-cpus', type=int, default=max(1, (os.cpu_count() or 2) - 2))
+    parser.add_argument('--time-start', default=TIME_START, help='YYYYMMDDTHHMMSS (UTC), default: %(default)s')
+    parser.add_argument('--time-end', default=TIME_END, help='YYYYMMDDTHHMMSS (UTC), on a full hour, default: %(default)s')
+    parser.add_argument('--ds', action='store_true', help='enable the DS amplitude similarity test (needs ~10+ acquisitions)')
+    parser.add_argument('--min-acquisitions', type=int, default=MIN_ACQUISITIONS, help='default: %(default)s')
     return parser.parse_args()
 
 
@@ -142,7 +151,10 @@ def compare_with_ismn(stack, gdf, ismn):
 
 
 def main():
+    global TIME_START, TIME_END, DS_FLAG, MIN_ACQUISITIONS
     args = parse_args()
+    TIME_START, TIME_END = args.time_start, args.time_end
+    DS_FLAG, MIN_ACQUISITIONS = args.ds, args.min_acquisitions
     os.makedirs(args.project_dir, exist_ok=True)
     export_dir = os.path.join(args.project_dir, 'SSM')
     started = datetime.datetime.now()
@@ -167,7 +179,8 @@ def main():
     print(scores_df.round(3).to_string(index=False))
     with open(os.path.join(export_dir, 'run_info.json'), 'w') as f:
         json.dump({'aoi': AOI_FILE, 'period': [TIME_START, TIME_END], 'sensors': args.sensors, 's1_source': args.s1_source,
-                   'stack_files': stack_files, 'runtime_min': (datetime.datetime.now() - started).seconds / 60}, f, indent=2)
+                   'ds_flag': DS_FLAG, 'min_acquisitions': MIN_ACQUISITIONS, 'stack_files': stack_files,
+                   'runtime_min': (datetime.datetime.now() - started).total_seconds() / 60}, f, indent=2)
 
 
 if __name__ == '__main__':

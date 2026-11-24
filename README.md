@@ -55,6 +55,10 @@ pytest tests/
 
 `tests/smoke/run_ford_dry_lake.py` runs a short end-to-end case at the Ford Dry Lake SCAN station (California), compared with ISMN in-situ soil moisture.
 
+### Case study
+
+[**Ford Dry Lake, California (Nov 2025 – Nov 2026)**](case_studies/FordDryLake/): one year of NISAR and Sentinel-1 soil moisture compared with in-situ data. InSAR4SM reaches 1.7 % RMSE (R 0.90), against 4.0 % (R 0.84) for ERA5-Land, with an estimate every ~2 days at 125 m spacing. The folder has a [PDF report](case_studies/FordDryLake/FordDryLake_case_study.pdf) and a [notebook](case_studies/FordDryLake/FordDryLake_case_study.ipynb).
+
 ### 1.4 Set environmental variables (optional)
 on GNU/Linux, append to .bashrc file:
 ```
