@@ -27,7 +27,7 @@ The installation notes below are tested only on Linux. The local Sentinel-1 geoc
 ### 1.1 Download InSAR4SM
 First you have to download InSAR4SM using the following command
 
-```git clone https://github.com/kleok/InSAR4SM.git```
+```git clone https://github.com/moistx-labs/INSAR4SM.git```
 
 ### 1.2 Create python environment for InSAR4SM
 
@@ -90,7 +90,7 @@ For the NISAR (L-band) work, please also cite:
 
 ## 4. Contributors
 - **Kleanthis Karamvasis**: author and maintainer.
-- **Giorgos Katsamas** ([@GiorgosKatsamas](https://github.com/GiorgosKatsamas)): NISAR GSLC and Sentinel-1 geocoded-SLC workflow, ERA5-Land improvements and model fixes ([#14](https://github.com/kleok/INSAR4SM/pull/14)). Thank you, Giorgos!
+- **Giorgos Katsamas** ([@GiorgosKatsamas](https://github.com/GiorgosKatsamas)): NISAR GSLC and Sentinel-1 geocoded-SLC workflow, ERA5-Land improvements and model fixes ([#14](https://github.com/moistx-labs/INSAR4SM/pull/14)). Thank you, Giorgos!
 
 ## 5. Acknowledgements
 <a href="https://github.com/moistx-labs"><img src="figures/moistx_logo.png" width="180" alt="moistX"></a>
