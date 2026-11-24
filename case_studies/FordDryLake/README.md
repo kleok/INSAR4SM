@@ -32,6 +32,15 @@ python case_studies/FordDryLake/build_report.py
 
 The ISMN data (station *FordDryLake*, network SCAN, 5 cm) is available from https://ismn.earth after free registration.
 
+## References
+- Karamvasis, K., & Karathanassi, V. (2023). Soil moisture estimation from Sentinel-1 interferometric observations over arid regions. *Computers & Geosciences*, 178, 105410. https://doi.org/10.1016/j.cageo.2023.105410
+- Katsamas, G., Karamvasis, K., & Karathanassi, V. (2026). Toward Improved Soil Moisture Retrieval Using NISAR InSAR Closure Phase Measurements. *EARSeL Symposium, Athens*. [PDF](https://drive.google.com/file/d/1nKk2JU313nhIxNLPmR2ZAa3G-Cnvtlm3/view?usp=drive_link)
+
+## Acknowledgements
+<a href="https://github.com/moistx-labs"><img src="../../figures/moistx_logo.png" width="160" alt="moistX"></a>
+
+The development of InSAR4SM is supported by [moistX](https://github.com/moistx-labs). The NISAR and Sentinel-1 geocoded-SLC workflow was contributed by Giorgos Katsamas ([@GiorgosKatsamas](https://github.com/GiorgosKatsamas)).
+
 **Data credits:**
 - **In situ:** International Soil Moisture Network (Dorigo et al., 2021), network SCAN (USDA NRCS).
 - **Meteorology:** ERA5-Land (Muñoz-Sabater et al., 2021), Copernicus Climate Change Service.
