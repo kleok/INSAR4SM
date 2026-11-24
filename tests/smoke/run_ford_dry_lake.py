@@ -8,12 +8,12 @@ Downloads ERA5-Land (CDS, ~/.cdsapirc), NISAR GSLC windows and Sentinel-1 bursts
 The run is resumable: downloaded data are reused on a rerun.
 
 Smoke test (defaults: 2 months, DS test off):
-    python tests/smoke/run_ford_dry_lake.py --project-dir /media/kle/cropg_ssd1/INSAR4SM_tests/FordDryLake \
-        --ismn-csv /path/to/sm_FordDryLake_..._0.0508_0.0508.csv [--sensors S1 NISAR]
+    python tests/smoke/run_ford_dry_lake.py --project-dir RUN_DIR \
+        --ismn-csv ISMN_5cm.stm [--sensors S1 NISAR]
 
 Validation (12 months, DS test on):
-    python tests/smoke/run_ford_dry_lake.py --project-dir /media/kle/cropg_ssd1/INSAR4SM_tests/FordDryLake_12m \
-        --ismn-csv /path/to/sm_FordDryLake_..._0.0508_0.0508.csv \
+    python tests/smoke/run_ford_dry_lake.py --project-dir RUN_DIR_12m \
+        --ismn-csv ISMN_5cm.stm \
         --time-start 20251122T000000 --time-end 20261111T230000 --ds --min-acquisitions 10
 """
 import os
@@ -34,6 +34,7 @@ sys.path.insert(0, REPO_DIR)
 
 from insar4sm.ERA5.ERA5_class import ERA5
 from insar4sm.geocoded_stack import GEOCODED_stack, get_dem, track_summary
+from insar4sm.ismn import read_ismn
 from insar4sm.joblib_progress_bar import tqdm_joblib
 from insar4sm.sm_estimation_funcs import sm_estimation
 
@@ -56,7 +57,7 @@ TP_QUANTILE = 0.2
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--project-dir', required=True, help='where downloads and outputs are stored')
-    parser.add_argument('--ismn-csv', required=True, help='ISMN 5 cm soil moisture CSV (date_time, soil_moisture)')
+    parser.add_argument('--ismn-csv', required=True, help='5 cm soil moisture of the station, downloaded with your own ISMN account (.stm, or CSV with date_time, soil_moisture)')
     parser.add_argument('--sensors', nargs='+', default=['S1', 'NISAR'], choices=['S1', 'NISAR'])
     parser.add_argument('--s1-source', default='OPERA', choices=['OPERA', 'COMPASS'],
                         help='OPERA: JPL geocoded bursts, North America, no isce3. COMPASS: local geocoding, global, needs isce3')
@@ -159,7 +160,7 @@ def main():
     export_dir = os.path.join(args.project_dir, 'SSM')
     started = datetime.datetime.now()
 
-    ismn = pd.read_csv(args.ismn_csv, parse_dates=['date_time']).set_index('date_time')['soil_moisture'].sort_index()
+    ismn = read_ismn(args.ismn_csv)
 
     meteo_file = download_era5(args.project_dir)
     stack_files = build_stacks(args.project_dir, args.sensors, args.s1_source)

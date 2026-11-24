@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Collects the outputs of the Ford Dry Lake 12-month run into small CSV files in results/.
 
-The case-study notebook and the PDF report read only these files, so they can be rerun
-without the SAR data (several GB). Run this once after the processing run:
+They hold InSAR4SM and ERA5-Land results only, no in-situ data: ISMN data cannot be redistributed,
+so the notebook and the report read the ISMN file that each user downloads. Run this once after
+the processing run:
 
     python tests/smoke/run_ford_dry_lake.py --project-dir <RUN_DIR> --ismn-csv <ISMN_CSV> \
         --time-start 20251122T000000 --time-end 20261111T230000 --ds --min-acquisitions 10
-    python case_studies/FordDryLake/prepare_results.py --run-dir <RUN_DIR> --ismn-csv <ISMN_CSV>
+    python case_studies/FordDryLake/prepare_results.py --run-dir <RUN_DIR>
 """
 import os
 import sys
@@ -31,7 +32,6 @@ AOI_FILE = os.path.join(REPO_DIR, 'tests', 'data', 'FordDryLake_aoi.geojson')
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--run-dir', required=True, help='--project-dir of run_ford_dry_lake.py')
-    parser.add_argument('--ismn-csv', required=True, help='ISMN 5 cm soil moisture CSV (date_time, soil_moisture)')
     parser.add_argument('--out-dir', default=os.path.join(HERE, 'results'))
     args = parser.parse_args()
     os.makedirs(args.out_dir, exist_ok=True)
@@ -41,15 +41,23 @@ def main():
 
     # 1. track summaries (acquisitions, revisit, coherence, incidence, AOI coverage)
     tracks = pd.DataFrame([track_summary(f) for f in run_info['stack_files']])
+    orbit_hour = {}
+    for stack_file in run_info['stack_files']: # hour used for ERA5-Land and the in-situ comparison
+        with np.load(stack_file) as data:
+            t = pd.to_datetime(data['datetimes'])
+            orbit_hour[(str(data['sensor']), str(data['track']))] = int(np.round(np.mean(t.hour + t.minute / 60))) % 24
     tracks.to_csv(os.path.join(args.out_dir, 'tracks.csv'), index=False)
 
-    # 2. InSAR4SM vs ISMN vs ERA5-Land at every acquisition (station cell and AOI mean)
+    # 2. InSAR4SM (station cell and AOI mean) and ERA5-Land at every acquisition
     comparisons, estimates = [], []
     for track_dir in sorted(glob.glob(os.path.join(ssm_dir, '*_*'))):
         if not os.path.isdir(track_dir):
             continue
         sensor, track = os.path.basename(track_dir).split('_')
         comp = pd.read_csv(os.path.join(track_dir, 'comparison_ismn_125.csv'), parse_dates=['date'])
+        comp = comp.drop(columns='insitu_5cm') # ISMN values are not shared
+        comp['date'] = comp['date'] + pd.Timedelta(hours=orbit_hour[(sensor, track)])
+        comp = comp.rename(columns={'date': 'time_utc'})
         comp.insert(0, 'track', track)
         comp.insert(0, 'sensor', sensor)
         comparisons.append(comp)
@@ -65,19 +73,17 @@ def main():
         long.insert(0, 'sensor', sensor)
         estimates.append(long.dropna(subset=['sm_pct']).round({'sm_pct': 2}))
 
-    pd.concat(comparisons).round(3).to_csv(os.path.join(args.out_dir, 'comparisons.csv'), index=False)
+    pd.concat(comparisons).round(3).to_csv(os.path.join(args.out_dir, 'insar4sm_era5.csv'), index=False)
     pd.concat(estimates).to_csv(os.path.join(args.out_dir, 'estimates.csv.gz'), index=False, compression='gzip')
 
-    # 4. daily context: ISMN 5 cm daily mean, ERA5-Land AOI daily mean soil moisture and precipitation
-    ismn = pd.read_csv(args.ismn_csv, parse_dates=['date_time']).set_index('date_time')['soil_moisture']
+    # 4. daily context: ERA5-Land AOI daily mean soil moisture and precipitation
     meteo = convert_to_df(os.path.join(args.run_dir, 'ERA5', 'merged_ERA5.nc'), AOI_FILE)
     meteo.index = pd.to_datetime(meteo.index)
     start, end = pd.Timestamp(run_info['period'][0]).normalize(), pd.Timestamp(run_info['period'][1]).normalize()
-    daily = pd.DataFrame({'ismn_5cm_pct': ismn.resample('D').mean() * 100,
-                          'era5_swvl1_pct': meteo['swvl1'].resample('D').mean() * 100,
+    daily = pd.DataFrame({'era5_swvl1_pct': meteo['swvl1'].resample('D').mean() * 100,
                           'era5_precip_mm': meteo['tp'].resample('D').sum(min_count=1)}).loc[start:end]
     daily.index.name = 'date'
-    daily.round(3).to_csv(os.path.join(args.out_dir, 'daily_reference.csv'))
+    daily.round(3).to_csv(os.path.join(args.out_dir, 'era5_daily.csv'))
 
     # run settings without local paths: AOI relative to the repository, stack files by name only
     shared_info = dict(run_info, aoi=os.path.relpath(run_info['aoi'], REPO_DIR),
