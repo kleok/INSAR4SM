@@ -86,7 +86,7 @@ Algorithms implemented in the software are described in detail at our publicatio
 
 For the NISAR (L-band) work, please also cite:
 
-- <!-- TODO: full citation (authors, year, title, venue, DOI) --> NISAR soil moisture with InSAR4SM. [PDF](https://drive.google.com/file/d/1nKk2JU313nhIxNLPmR2ZAa3G-Cnvtlm3/view?usp=drive_link)
+- Katsamas, G., Karamvasis, K., & Karathanassi, V. (2026). Toward Improved Soil Moisture Retrieval Using NISAR InSAR Closure Phase Measurements. EARSeL Symposium, Athens. [PDF](https://drive.google.com/file/d/1nKk2JU313nhIxNLPmR2ZAa3G-Cnvtlm3/view?usp=drive_link)
 
 ## 4. Contributors
 - **Kleanthis Karamvasis**: author and maintainer.

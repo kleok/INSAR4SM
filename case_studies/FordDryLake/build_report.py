@@ -263,6 +263,23 @@ def build():
     story.append(p('Needs a NASA Earthdata account (~/.netrc) and a Copernicus CDS key (~/.cdsapirc). The ISMN data '
                    '(station FordDryLake, network SCAN, 5 cm) is available from https://ismn.earth after free registration.', 'small'))
     story.append(Spacer(1, 8))
+    story.append(p('References', 'h2'))
+    story.append(p('Karamvasis, K., &amp; Karathanassi, V. (2023). Soil moisture estimation from Sentinel-1 interferometric '
+                   'observations over arid regions. Computers &amp; Geosciences, 178, 105410. '
+                   'https://doi.org/10.1016/j.cageo.2023.105410', 'small'))
+    story.append(Spacer(1, 3))
+    story.append(p('Katsamas, G., Karamvasis, K., &amp; Karathanassi, V. (2026). Toward Improved Soil Moisture Retrieval '
+                   'Using NISAR InSAR Closure Phase Measurements. EARSeL Symposium, Athens.', 'small'))
+    story.append(Spacer(1, 8))
+    story.append(p('Acknowledgements', 'h2'))
+    logo = Image(os.path.join(cs.HERE, '..', '..', 'figures', 'moistx_logo.png'))
+    logo._restrictSize(38 * mm, 12 * mm)
+    ack = Table([[logo, p('The development of InSAR4SM is supported by moistX (https://github.com/moistx-labs). '
+                          'The NISAR and Sentinel-1 geocoded-SLC workflow was contributed by Giorgos Katsamas.', 'small')]],
+                colWidths=[44 * mm, TEXT_W - 44 * mm])
+    ack.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), ('LEFTPADDING', (0, 0), (0, 0), 0)]))
+    story.append(ack)
+    story.append(Spacer(1, 8))
     story.append(p('Data credits', 'h2'))
     story.append(p('In-situ soil moisture: International Soil Moisture Network (Dorigo et al., 2021, Hydrol. Earth Syst. Sci. '
                    '25, 5749-5804), network SCAN (USDA NRCS). Meteorology: ERA5-Land (Munoz-Sabater et al., 2021, Earth Syst. '
