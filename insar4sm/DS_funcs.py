@@ -191,9 +191,6 @@ def find_best_pixels_amp_fast(DS_coords_1:np.array,
     Returns:
         np.array: A boolean 1d array [DS_pixels,] that contains pixels with similar amplitude information
     """
-    num_pixels = DS_coords_1.shape[0]
-    DS_amp_similarity = np.zeros((num_pixels), dtype=np.bool_)
-    
     # compare with mean intensity value of all region
     # mean_DS_amp = np.nanmean(DS_amp_values, axis=1)
     mean_DS_amp = np.nanmedian(DS_amp_values, axis=1)
@@ -207,14 +204,10 @@ def find_best_pixels_amp_fast(DS_coords_1:np.array,
     center_amp_values_flatten = np.nanmean(np.nanmean(center_amp_values, axis=1), axis=1)
     mean_DS_amp = center_amp_values_flatten.copy()
     
-    for DS_child_id in range(num_pixels):
-        DS_child = DS_amp_values[:,DS_child_id]
-        KS_statistic, p_value = stats.ks_2samp(mean_DS_amp,  DS_child)
-        if p_value<p_value_thres:
-            DS_amp_similarity[DS_child_id]=False
-        else:
-            DS_amp_similarity[DS_child_id]=True
-            
+    # one vectorized test for all pixels (a test per pixel in a python loop is slow)
+    KS_statistics, p_values = stats.ks_2samp(mean_DS_amp[:,np.newaxis], DS_amp_values, axis=0)
+    DS_amp_similarity = ~(p_values<p_value_thres)
+
     return DS_amp_similarity
 
 def find_best_pixels_amp(DS_coords_1:np.array, DS_coords_2:np.array, DS_amp_values:np.array, p_value_thres:float = 0.05, similarity_perc:float = 0.4)->np.array:

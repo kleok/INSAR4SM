@@ -22,7 +22,8 @@ class INSAR4SM_stack:
 
     Subclasses (e.g. insar4sm.geocoded_stack.GEOCODED_stack) implement prepare_datasets, plot and
     calc_insar_stack. After calc_insar_stack the stack must provide slc_stack, amp_stack, lat_data,
-    lon_data, incLocal, hgt, perp_baseline_stack and primary_index, which SM_point uses.
+    lon_data, incLocal, hgt, perp_baseline_stack and primary_index, which SM_point uses
+    (perp_baseline_stack may be None for flattened SLCs, the baselines are then zero).
     """
     def __init__(self, projectname, n_CPUs, AOI, meteo_file, sand, clay, orbit_time, days_back, export_dir):
 
@@ -147,7 +148,7 @@ class SM_point:
         self.opt_method = 'SLSQP' # or 'trust-constr'
         self.ph_closure_dist = 6 # distance between sar acquisitions
         self.weight_factor = 1 # the weighting factor of coherence cost
-        self.sm_dry_state = 2.8  # in m3/m3
+        self.sm_dry_state = 2.8  # soil moisture (%) of the driest conditions (set from the notebook, see sm_estimation)
         self.freq_GHz = insar4sm_stack.freq_GHz
 
         # read soil data
@@ -330,17 +331,20 @@ class SM_point:
         self.lonlat_DS[self.DS_ind,1] = insar4sm_stack.lon_data[mean_i,mean_j]
         self.lonlat_DS[self.DS_ind,2] = insar4sm_stack.lat_data[mean_i,mean_j]
         
-        #xy
-        Xs, Ys = llh2xy(insar4sm_stack.lat_data,insar4sm_stack.lon_data)
+        #xy (only the DS pixel is projected, projecting the whole grid for every grid cell is slow)
+        Xs, Ys = llh2xy(insar4sm_stack.lat_data[mean_i,mean_j],insar4sm_stack.lon_data[mean_i,mean_j])
         self.xy_DS[self.DS_ind,0] = self.DS_ind
-        self.xy_DS[self.DS_ind,1] = Ys[mean_i,mean_j]
-        self.xy_DS[self.DS_ind,2] = Xs[mean_i,mean_j]
+        self.xy_DS[self.DS_ind,1] = Ys
+        self.xy_DS[self.DS_ind,2] = Xs
         
         #incidence angle information
         self.inc_DS[self.DS_ind] = insar4sm_stack.incLocal[mean_i,mean_j]
         
         #baseline information
-        self.DS_bperp = insar4sm_stack.perp_baseline_stack[self.start_index:self.end_index,mean_i,mean_j]
+        if insar4sm_stack.perp_baseline_stack is None:
+            self.DS_bperp = np.zeros(self.end_index - self.start_index, dtype=np.float32)
+        else:
+            self.DS_bperp = insar4sm_stack.perp_baseline_stack[self.start_index:self.end_index,mean_i,mean_j]
         
         # Latest image is selected as primary in order to calculate DS perpendicular
         # baseline information. We subtract the first image to re-reference
