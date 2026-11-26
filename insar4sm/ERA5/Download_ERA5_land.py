@@ -109,7 +109,7 @@ def Get_ERA5_data(ERA5_variables:list,
 
     ERA5_datasets = []
 
-    df = pd.date_range(start=start_datetime, end=end_datetime, freq='h').to_frame(name='Datetime')
+    df = pd.date_range(start=start_datetime, end=end_datetime, freq='H').to_frame(name='Datetime')
     
     df['year'] = df['Datetime'].dt.year
     df["year_str"] = ['{:02d}'.format(year) for year in df['year']]

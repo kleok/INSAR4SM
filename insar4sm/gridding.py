@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 import geopandas as gpd
+import pandas as pd
+import rasterio
 from shapely.geometry import Point
 import numpy as np
 import os
@@ -85,3 +87,34 @@ def create_grid_xy(Outdir:str, AOI:str, res:int=250)->tuple[gpd.GeoDataFrame,gpd
                              driver='GeoJSON')
     
     return sm_points_latlon, sm_polygons_latlon
+def sm_to_geotiff(sm_df:pd.DataFrame, sm_points:gpd.GeoSeries, res:int, out_file:str)->str:
+    """Writes the soil moisture estimations of the grid cells to a GeoTIFF (one band per SAR acquisition).
+
+    The grid cells (see create_grid_xy) are centred on a UTM lattice with spacing res, so each
+    cell becomes one pixel of res meters.
+
+    Args:
+        sm_df (pd.DataFrame): soil moisture estimations, one row per grid cell (same order as sm_points) and one column per acquisition
+        sm_points (gpd.GeoSeries): centroids of the grid cells in WGS84
+        res (int): the grid size in meters (as in create_grid_xy)
+        out_file (str): path of output GeoTIFF
+
+    Returns:
+        str: path of output GeoTIFF
+    """
+    utm_crs_epsg = WGS84_to_UTM(sm_points.union_all().centroid.x, sm_points.union_all().centroid.y)
+    points_xy = sm_points.to_crs(epsg=utm_crs_epsg)
+    x0, y1 = points_xy.x.min(), points_xy.y.max()
+    cols = np.round((points_xy.x.values - x0) / res).astype(int)
+    rows = np.round((y1 - points_xy.y.values) / res).astype(int)
+
+    sm_maps = np.full((sm_df.shape[1], rows.max() + 1, cols.max() + 1), np.nan, dtype=np.float32)
+    sm_maps[:, rows, cols] = sm_df.values.T
+    transform = rasterio.transform.from_origin(x0 - res / 2, y1 + res / 2, res, res)
+    with rasterio.open(out_file, 'w', driver='GTiff', width=sm_maps.shape[2], height=sm_maps.shape[1],
+                       count=sm_maps.shape[0], dtype='float32', crs='EPSG:{}'.format(utm_crs_epsg),
+                       transform=transform, nodata=np.nan, compress='deflate') as dst:
+        dst.write(sm_maps)
+        for band, date in enumerate(sm_df.columns, start=1):
+            dst.set_band_description(band, str(date))
+    return out_file

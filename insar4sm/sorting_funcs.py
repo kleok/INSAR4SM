@@ -42,8 +42,26 @@ def coh_dist_calc(acq_sorted:np.array, Coh_array:np.array)->pd.DataFrame:
     Coh_dist_df = pd.DataFrame()
     Coh_dist_df['dists']=dist_list
     Coh_dist_df['coh']=coh_list
-    
+
     return Coh_dist_df
+
+
+def max_coh_dist_calc(acq_sorted:np.array, Coh_array:np.array)->tuple[np.array,np.array]:
+    """ Extracts the maximum coherence for each observed temporal distance.
+    Same as coh_dist_calc(...).groupby(by=['dists']).max(), without pandas as it is called for every sorting iteration.
+
+    Args:
+        acq_sorted (np.array): sorted indices of SAR acquisitions (earlier to latest)
+        Coh_array (np.array): coherence matrix between SAR acquisitions
+
+    Returns:
+        tuple[np.array,np.array]: Temporal distances, maximum observed coherence of each distance
+    """
+    acq_sorted = acq_sorted.astype(np.int32)
+    dists = np.arange(1, acq_sorted.shape[0])
+    max_cohs = np.array([np.nanmax(Coh_array[acq_sorted[:-dist], acq_sorted[dist:]]) for dist in dists])
+
+    return dists, max_cohs
 
 
 def find_sm_sorting(Datetimes:list,
@@ -97,11 +115,10 @@ def find_sm_sorting(Datetimes:list,
     amp_sm = amp_vector-amp_dry
     sm_amp_ordering = np.argsort(amp_sm)
     
-    Coh_dist_df = coh_dist_calc(acq_sorted = sm_amp_ordering,
-                                Coh_array = Coh_matrix)
+    dists, max_cohs = max_coh_dist_calc(acq_sorted = sm_amp_ordering,
+                                        Coh_array = Coh_matrix)
     
-    Max_Coh_dist_df = Coh_dist_df.groupby(by=['dists']).max()
-    m_amp, b_amp = np.polyfit(Max_Coh_dist_df.index, Max_Coh_dist_df['coh'], 1)  
+    m_amp, b_amp = np.polyfit(dists, max_cohs, 1)  
 
     #%% 3A. Find sm combinations based on coherence matrix
     
@@ -150,11 +167,10 @@ def find_sm_sorting(Datetimes:list,
     
     for iteration in range(n_iters):
         
-        Coh_dist_df = coh_dist_calc(acq_sorted = sm_orderings[iteration,:],
-                                    Coh_array = Coh_matrix)
+        dists, max_cohs = max_coh_dist_calc(acq_sorted = sm_orderings[iteration,:],
+                                            Coh_array = Coh_matrix)
     
-        Max_Coh_dist_df = Coh_dist_df.groupby(by=['dists']).max()
-        m, b = np.polyfit(Max_Coh_dist_df.index, Max_Coh_dist_df['coh'], 1)  
+        m, b = np.polyfit(dists, max_cohs, 1)  
         
         slopes[iteration]=m
         
@@ -230,11 +246,10 @@ def find_sm_sorting(Datetimes:list,
         sm_coh_ordering = sm_orderings[np.argsort(slopes)[0], :]
         
 
-    Coh_dist_df = coh_dist_calc(acq_sorted = sm_coh_ordering,
-                                Coh_array = Coh_matrix)
+    dists, max_cohs = max_coh_dist_calc(acq_sorted = sm_coh_ordering,
+                                        Coh_array = Coh_matrix)
     
-    Max_Coh_dist_df = Coh_dist_df.groupby(by=['dists']).max()
-    m_coh, b_coh = np.polyfit(Max_Coh_dist_df.index, Max_Coh_dist_df['coh'], 1)  
+    m_coh, b_coh = np.polyfit(dists, max_cohs, 1)  
 
     #%% 3C. Select the best sorting based on frequency of best sm_combinations
 
