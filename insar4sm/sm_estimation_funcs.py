@@ -2,19 +2,21 @@ from insar4sm.classes import INSAR4SM_stack, SM_point
 import numpy as np
 import pandas as pd
 
-def sm_estimation(stack:INSAR4SM_stack, sm_ind:int, dry_date_manual_flag: bool, dry_date: str, DS_flag: bool = True)->np.array:
+def sm_estimation(stack:INSAR4SM_stack, sm_ind:int, dry_date_manual_flag: bool, dry_date: str, DS_flag: bool = True, sm_dry_state: float = 2.8)->np.array:
     """Estimates soil moisture using insar4sm functionalities
 
     Args:
         stack (INSAR4SM_stack): the object of the INSAR4SM_stack class
         sm_ind (int): index of soil moisture estimation point
         DS_flag (bool): flag that determines if distributed scatterers will be computed.
+        sm_dry_state (float, optional): soil moisture (%) assigned to the driest conditions. Defaults to 2.8.
 
     Returns:
         np.array: soil moisture estimations from inversion
     """
     sm_point_ts = SM_point(stack, sm_ind)
     sm_point_ts.amp_sel = DS_flag
+    sm_point_ts.sm_dry_state = sm_dry_state
     sm_point_ts.get_DS_info(stack)
     sm_point_ts.calc_covar_matrix()
     if sm_point_ts.non_coverage or np.all(sm_point_ts.amp_DS==0):

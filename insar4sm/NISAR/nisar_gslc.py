@@ -14,7 +14,7 @@ import geopandas as gpd
 import h5py
 import earthaccess
 
-from insar4sm.geocoded_stack import (aoi_grid, select_complete_dates, mosaic_sources,
+from insar4sm.geocoded_stack import (umm_footprint, umm_start_time, search_summary, aoi_grid, select_complete_dates, mosaic_sources,
                                      dem_on_grid, local_incidence_angle, save_stack)
 
 GSLC_SHORT_NAME = 'NISAR_L2_GSLC_PROVISIONAL_V1'
@@ -60,6 +60,23 @@ def search_gslc(AOI_File:str, time_start:str, time_end:str)->dict:
     for (track, frame, start), (_, result) in latest.items():
         tracks.setdefault(track, {}).setdefault(start[:8], {})[frame] = result
     return tracks
+
+
+def search_nisar_tracks(AOI_File:str, time_start:str, time_end:str)->list:
+    """Summary of the NISAR tracks over the AOI, from the catalogue only (nothing is read).
+
+    Args:
+        AOI_File (str): path of vector AOI file
+        time_start (str): start datetime (YYYYMMDDTHHMMSS, UTC)
+        time_end (str): end datetime (YYYYMMDDTHHMMSS, UTC)
+
+    Returns:
+        list: one dict per track (see geocoded_stack.search_summary)
+    """
+    return [search_summary('NISAR', track, dates, AOI_File,
+                           footprint = umm_footprint,
+                           start_time = umm_start_time)
+            for track, dates in sorted(search_gslc(AOI_File, time_start, time_end).items())]
 
 
 def read_gslc_window(result, x:np.array, y:np.array, epsg:int|None, pol:str = 'HH', n_tries:int = 3)->dict:
@@ -122,7 +139,7 @@ def read_gslc_window(result, x:np.array, y:np.array, epsg:int|None, pol:str = 'H
     raise RuntimeError('Could not read {}'.format(result['meta']['native-id']))
 
 
-def build_nisar_stacks(AOI_File:str, time_start:str, time_end:str, out_dir:str, dem_file:str, margin_m:float, pol:str = 'HH', min_acquisitions:int = 5)->list:
+def build_nisar_stacks(AOI_File:str, time_start:str, time_end:str, out_dir:str, dem_file:str, margin_m:float, pol:str = 'HH', min_acquisitions:int = 5, tracks:list|None = None)->list:
     """Builds one geocoded SLC stack file per NISAR track that covers the AOI.
 
     Frames of the same pass that both cover the AOI are mosaicked. Read windows are cached
@@ -137,6 +154,7 @@ def build_nisar_stacks(AOI_File:str, time_start:str, time_end:str, out_dir:str, 
         margin_m (float): margin around the AOI in meters (at least the soil moisture grid size)
         pol (str, optional): polarization. Defaults to 'HH'.
         min_acquisitions (int, optional): tracks with fewer complete acquisitions are skipped. Defaults to 5.
+        tracks (list | None, optional): tracks to process (e.g. ['066D']), see search_nisar_tracks. Defaults to None (all tracks).
 
     Returns:
         list: paths of the saved stack files
@@ -146,6 +164,8 @@ def build_nisar_stacks(AOI_File:str, time_start:str, time_end:str, out_dir:str, 
     stack_files = []
 
     for track, dates in sorted(search_gslc(AOI_File, time_start, time_end).items()):
+        if tracks is not None and track not in tracks:
+            continue
         kept_dates, frames = select_complete_dates({date: set(by_frame) for date, by_frame in dates.items()})
         print('NISAR track {}: {} acquisitions, {} with all frames {}'.format(track, len(dates), len(kept_dates), frames))
         if len(kept_dates) < min_acquisitions:

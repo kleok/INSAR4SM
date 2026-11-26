@@ -25,9 +25,10 @@ import pandas as pd
 import geopandas as gpd
 import h5py
 import asf_search as asf
+from shapely.geometry import shape
 
 from insar4sm.gridding import WGS84_to_UTM
-from insar4sm.geocoded_stack import (select_complete_dates, mosaic_sources, dem_on_grid,
+from insar4sm.geocoded_stack import (search_summary, select_complete_dates, mosaic_sources, dem_on_grid,
                                      local_incidence_angle, save_stack)
 
 X_POSTING, Y_POSTING = 5, 10  # OPERA CSLC-S1 posting in meters
@@ -74,7 +75,7 @@ def search_bursts(AOI_File:str, time_start:str, time_end:str, pol:str = 'VV')->d
         pol (str, optional): polarization. Defaults to 'VV'.
 
     Returns:
-        dict: {track (e.g. '030A'): {date (YYYYMMDD): {burst_id (e.g. 't030_062533_iw3'): burst granule name}}}
+        dict: {track (e.g. '030A'): {date (YYYYMMDD): {burst_id (e.g. 't030_062533_iw3'): asf_search result}}}
     """
     aoi = gpd.read_file(AOI_File).to_crs(epsg=4326).geometry.union_all()
     results = asf.search(dataset = 'SLC-BURST',
@@ -88,8 +89,27 @@ def search_bursts(AOI_File:str, time_start:str, time_end:str, pol:str = 'VV')->d
         track = '{:03d}{}'.format(int(p['pathNumber']), p['flightDirection'][0])
         burst_id = 't' + p['burst']['fullBurstID'].lower()
         date = pd.to_datetime(p['startTime']).strftime('%Y%m%d')
-        tracks.setdefault(track, {}).setdefault(date, {})[burst_id] = p['fileID']
+        tracks.setdefault(track, {}).setdefault(date, {})[burst_id] = result
     return tracks
+
+
+def search_s1_tracks(AOI_File:str, time_start:str, time_end:str, pol:str = 'VV')->list:
+    """Summary of the Sentinel-1 tracks over the AOI, from the catalogue only (nothing is downloaded).
+
+    Args:
+        AOI_File (str): path of vector AOI file
+        time_start (str): start datetime (YYYYMMDDTHHMMSS, UTC)
+        time_end (str): end datetime (YYYYMMDDTHHMMSS, UTC)
+        pol (str, optional): polarization. Defaults to 'VV'.
+
+    Returns:
+        list: one dict per track (see geocoded_stack.search_summary)
+    """
+    return [search_summary('S1', track, dates, AOI_File,
+                           footprint = lambda result: shape(result.geometry),
+                           start_time = lambda result: pd.to_datetime(result.properties['startTime']),
+                           n_bytes = lambda result: int(result.properties['bytes']))
+            for track, dates in sorted(search_bursts(AOI_File, time_start, time_end, pol).items())]
 
 
 def write_burst_db(AOI_File:str, burst_ids:list, burst_db_file:str, margin_m:float)->int:
@@ -236,7 +256,7 @@ def read_cslc(cslc_file:str, pol:str = 'VV')->dict:
                 'orbit_vel': np.stack([orbit['velocity_' + c][()] for c in 'xyz'], axis=-1)}
 
 
-def build_s1_stacks(AOI_File:str, time_start:str, time_end:str, out_dir:str, dem_file:str, margin_m:float, pol:str = 'VV', min_acquisitions:int = 5, keep_safe:bool = False)->list:
+def build_s1_stacks(AOI_File:str, time_start:str, time_end:str, out_dir:str, dem_file:str, margin_m:float, pol:str = 'VV', min_acquisitions:int = 5, keep_safe:bool = False, tracks:list|None = None)->list:
     """Builds one geocoded SLC stack file per Sentinel-1 track that covers the AOI.
 
     Bursts of the same pass that cover the AOI are mosaicked. CSLCs already produced are
@@ -252,19 +272,22 @@ def build_s1_stacks(AOI_File:str, time_start:str, time_end:str, out_dir:str, dem
         pol (str, optional): polarization. Defaults to 'VV'.
         min_acquisitions (int, optional): tracks with fewer complete acquisitions are skipped. Defaults to 5.
         keep_safe (bool, optional): keep the downloaded bursts. Defaults to False.
+        tracks (list | None, optional): tracks to process (e.g. ['030A']), see search_s1_tracks. Defaults to None (all tracks).
 
     Returns:
         list: paths of the saved stack files
     """
     work_dir = os.path.join(out_dir, 'S1_work')
     os.makedirs(work_dir, exist_ok=True)
-    tracks = search_bursts(AOI_File, time_start, time_end, pol)
+    found_tracks = search_bursts(AOI_File, time_start, time_end, pol)
+    if tracks is not None:
+        found_tracks = {track: dates for track, dates in found_tracks.items() if track in tracks}
     burst_db_file = os.path.join(work_dir, 'aoi_burst_db.sqlite3')
-    epsg = write_burst_db(AOI_File, sorted({b for dates in tracks.values() for bursts in dates.values() for b in bursts}),
+    epsg = write_burst_db(AOI_File, sorted({b for dates in found_tracks.values() for bursts in dates.values() for b in bursts}),
                           burst_db_file, margin_m)
     stack_files = []
 
-    for track, dates in sorted(tracks.items()):
+    for track, dates in sorted(found_tracks.items()):
         kept_dates, bursts = select_complete_dates({date: set(by_burst) for date, by_burst in dates.items()})
         print('S1 track {}: {} acquisitions, {} with all bursts {}'.format(track, len(dates), len(kept_dates), bursts))
         if len(kept_dates) < min_acquisitions:
@@ -275,7 +298,7 @@ def build_s1_stacks(AOI_File:str, time_start:str, time_end:str, out_dir:str, dem
         for date in kept_dates:
             for burst_id in bursts:
                 t0 = time.time()
-                cslc_file = process_burst(dates[date][burst_id], burst_id, date, work_dir, dem_file, burst_db_file, keep_safe)
+                cslc_file = process_burst(dates[date][burst_id].properties['fileID'], burst_id, date, work_dir, dem_file, burst_db_file, keep_safe)
                 cslcs[(date, burst_id)] = read_cslc(cslc_file, pol)
                 print('  {} {} done in {:.0f} s'.format(date, burst_id, time.time() - t0))
 

@@ -18,8 +18,8 @@ import geopandas as gpd
 import h5py
 import earthaccess
 
-from insar4sm.geocoded_stack import (aoi_grid, select_complete_dates, mosaic_sources,
-                                     dem_on_grid, local_incidence_angle, save_stack)
+from insar4sm.geocoded_stack import (umm_footprint, umm_start_time, search_summary, aoi_grid, select_complete_dates,
+                                     mosaic_sources, dem_on_grid, local_incidence_angle, save_stack)
 
 CSLC_SHORT_NAME = 'OPERA_L2_CSLC-S1_V1'
 # e.g. OPERA_L2_CSLC-S1_T100-213521-IW3_20251201T133628Z_20260217T201504Z_S1A_VV_v1.1
@@ -67,6 +67,39 @@ def search_opera_cslc(AOI_File:str, time_start:str, time_end:str, pol:str = 'VV'
     for (track, burst_id, start), (_, result) in latest.items():
         tracks.setdefault(track, {}).setdefault(start[:8], {})[burst_id] = result
     return tracks
+
+
+def track_label(track:str, dates:dict)->str:
+    """Track number plus pass direction (e.g. '100D'), as in the stack names, from the catalogue record.
+
+    Args:
+        track (str): track number (e.g. '100')
+        dates (dict): {date: {burst_id: earthaccess result}} of the track (see search_opera_cslc)
+
+    Returns:
+        str: track label
+    """
+    result = next(iter(next(iter(dates.values())).values()))
+    direction = [a['Values'][0] for a in result['umm']['AdditionalAttributes'] if a['Name'] == 'ASCENDING_DESCENDING'][0]
+    return track + direction[0]
+
+
+def search_opera_tracks(AOI_File:str, time_start:str, time_end:str, pol:str = 'VV')->list:
+    """Summary of the Sentinel-1 OPERA CSLC-S1 tracks over the AOI, from the catalogue only (nothing is read).
+
+    Args:
+        AOI_File (str): path of vector AOI file
+        time_start (str): start datetime (YYYYMMDDTHHMMSS, UTC)
+        time_end (str): end datetime (YYYYMMDDTHHMMSS, UTC)
+        pol (str, optional): polarization. Defaults to 'VV'.
+
+    Returns:
+        list: one dict per track (see geocoded_stack.search_summary)
+    """
+    return [search_summary('S1', track_label(track, dates), dates, AOI_File,
+                           footprint = umm_footprint,
+                           start_time = umm_start_time)
+            for track, dates in sorted(search_opera_cslc(AOI_File, time_start, time_end, pol).items())]
 
 
 def read_opera_window(result, x:np.array, y:np.array, epsg:int|None, pol:str = 'VV', n_tries:int = 3)->dict:
@@ -132,7 +165,7 @@ def read_opera_window(result, x:np.array, y:np.array, epsg:int|None, pol:str = '
     raise RuntimeError('Could not read {}'.format(result['meta']['native-id']))
 
 
-def build_opera_stacks(AOI_File:str, time_start:str, time_end:str, out_dir:str, dem_file:str, margin_m:float, pol:str = 'VV', min_acquisitions:int = 5)->list:
+def build_opera_stacks(AOI_File:str, time_start:str, time_end:str, out_dir:str, dem_file:str, margin_m:float, pol:str = 'VV', min_acquisitions:int = 5, tracks:list|None = None)->list:
     """Builds one geocoded SLC stack file per Sentinel-1 track from OPERA CSLC-S1 bursts (North America).
 
     Bursts of the same pass that cover the AOI are mosaicked. Read windows are cached in
@@ -147,6 +180,7 @@ def build_opera_stacks(AOI_File:str, time_start:str, time_end:str, out_dir:str, 
         margin_m (float): margin around the AOI in meters (at least the soil moisture grid size)
         pol (str, optional): polarization. Defaults to 'VV'.
         min_acquisitions (int, optional): tracks with fewer complete acquisitions are skipped. Defaults to 5.
+        tracks (list | None, optional): tracks to process (e.g. ['100D']), see search_opera_tracks. Defaults to None (all tracks).
 
     Returns:
         list: paths of the saved stack files
@@ -155,11 +189,13 @@ def build_opera_stacks(AOI_File:str, time_start:str, time_end:str, out_dir:str, 
     os.makedirs(chips_dir, exist_ok=True)
     stack_files = []
 
-    tracks = search_opera_cslc(AOI_File, time_start, time_end, pol)
-    if not tracks:
+    found_tracks = search_opera_cslc(AOI_File, time_start, time_end, pol)
+    if not found_tracks:
         print('No OPERA CSLC-S1 bursts found (OPERA covers North America only; use insar4sm.S1.s1_cslc elsewhere)')
+    if tracks is not None:
+        found_tracks = {track: dates for track, dates in found_tracks.items() if track_label(track, dates) in tracks}
 
-    for track, dates in sorted(tracks.items()):
+    for track, dates in sorted(found_tracks.items()):
         kept_dates, bursts = select_complete_dates({date: set(by_burst) for date, by_burst in dates.items()})
         print('S1 (OPERA) track {}: {} acquisitions, {} with all bursts {}'.format(track, len(dates), len(kept_dates), bursts))
         if len(kept_dates) < min_acquisitions:

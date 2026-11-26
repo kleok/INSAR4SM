@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import contextlib
+from typing import Iterator
 import joblib
 from tqdm import tqdm
 
 @contextlib.contextmanager
-def tqdm_joblib(tqdm_object:tqdm)->None:
+def tqdm_joblib(tqdm_object:tqdm)->Iterator[tqdm]:
     """Context manager to patch joblib to report into tqdm progress bar given as argument.
     
     ..References:

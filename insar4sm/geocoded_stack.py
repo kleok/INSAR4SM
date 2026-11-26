@@ -18,6 +18,8 @@ from rasterio.warp import reproject, Resampling
 from pyproj import Transformer
 from scipy.interpolate import CubicSpline
 from scipy.optimize import brentq
+from shapely.geometry import Polygon
+from shapely.ops import unary_union
 
 from insar4sm.classes import INSAR4SM_stack
 from insar4sm.prep_meteo import convert_to_df
@@ -70,6 +72,60 @@ def select_complete_dates(sources_per_date:dict, min_presence:float = 0.8)->tupl
     required = sorted(counts[counts >= min_presence * n_dates].index)
     dates = sorted(d for d, sources in sources_per_date.items() if set(required) <= set(sources))
     return dates, required
+
+
+def umm_footprint(result)->Polygon:
+    """Footprint of a granule from its NASA CMR (earthaccess) catalogue record, e.g. NISAR GSLC or OPERA CSLC-S1.
+    """
+    points = result['umm']['SpatialExtent']['HorizontalSpatialDomain']['Geometry']['GPolygons'][0]['Boundary']['Points']
+    return Polygon([(point['Longitude'], point['Latitude']) for point in points])
+
+
+def umm_start_time(result)->pd.Timestamp:
+    """Acquisition start time (UTC) of a granule from its NASA CMR (earthaccess) catalogue record.
+    """
+    return pd.to_datetime(result['umm']['TemporalExtent']['RangeDateTime']['BeginningDateTime'])
+
+
+def search_summary(sensor:str, track:str, dates:dict, AOI_File:str, footprint, start_time, n_bytes = None)->dict:
+    """Summary of a track found by a catalogue search, to choose tracks before any download.
+
+    Args:
+        sensor (str): sensor name
+        track (str): track id (e.g. '066D')
+        dates (dict): {date: {source id: search result}} (see search_gslc, search_bursts and search_opera_cslc)
+        AOI_File (str): path of vector AOI file
+        footprint (callable): search result -> footprint polygon in WGS84
+        start_time (callable): search result -> acquisition start time (UTC)
+        n_bytes (callable, optional): search result -> size of its download in bytes. Defaults to None (only the AOI window is read).
+
+    Returns:
+        dict: sensor, track, number of complete acquisitions (as kept by build_*_stacks), period, median revisit (days), pass time (UTC), sources, fraction of the AOI covered by the sources, download size (GB)
+    """
+    kept_dates, sources = select_complete_dates({date: set(by_source) for date, by_source in dates.items()})
+    aoi = gpd.read_file(AOI_File).to_crs(epsg=4326)
+    utm_crs = aoi.estimate_utm_crs()
+    if sources:
+        results = [dates[kept_dates[-1]][source] for source in sources]
+        covered = gpd.GeoSeries([unary_union([footprint(result) for result in results])], crs='EPSG:4326').to_crs(utm_crs)
+        aoi_covered = float(covered.intersection(aoi.to_crs(utm_crs).union_all()).area.iloc[0] / aoi.to_crs(utm_crs).area.sum())
+        pass_time = start_time(results[0]).strftime('%H:%M')
+    else:
+        aoi_covered, pass_time = 0.0, None
+    kept_datetimes = pd.to_datetime(kept_dates)
+    download_GB = np.nan
+    if n_bytes is not None:
+        download_GB = sum(n_bytes(dates[date][source]) for date in kept_dates for source in sources) / 1e9
+    return {'sensor': sensor,
+            'track': track,
+            'n_acquisitions': len(kept_dates),
+            'first': kept_dates[0] if kept_dates else None,
+            'last': kept_dates[-1] if kept_dates else None,
+            'revisit_days': float(np.median(np.diff(kept_datetimes).astype('timedelta64[D]').astype(int))) if len(kept_dates) > 1 else np.nan,
+            'pass_time_UTC': pass_time,
+            'sources': ', '.join(sources),
+            'aoi_covered': round(aoi_covered, 3),
+            'download_GB': round(download_GB, 1)}
 
 
 def mosaic_sources(source_stacks:list)->tuple[np.array, np.array]:
@@ -228,8 +284,9 @@ class GEOCODED_stack(INSAR4SM_stack):
     """
     def __init__(self, stack_file:str, projectname:str, n_CPUs:int, AOI:str, meteo_file:str, sand, clay, days_back:int, export_dir:str):
 
+        # the SLC cube is read only when needed (plot, calc_insar_stack), so that saved estimations load fast
         with np.load(stack_file) as data:
-            self.stack_data = {key: data[key] for key in data.files}
+            self.stack_data = {key: data[key] for key in data.files if key != 'slc'}
         self.stack_file = stack_file
         self.sensor = str(self.stack_data['sensor'])
         self.track = str(self.stack_data['track'])
@@ -282,7 +339,9 @@ class GEOCODED_stack(INSAR4SM_stack):
     def plot(self):
         """Plots mean amplitude and local incidence angle of the stack.
         """
-        layers = {'mean_amplitude_dB': 20*np.log10(np.nanmean(np.abs(self.stack_data['slc'][self.keep_bands]), axis=0)),
+        with np.load(self.stack_file) as data:
+            mean_amplitude = np.nanmean(np.abs(data['slc'][self.keep_bands]), axis=0)
+        layers = {'mean_amplitude_dB': 20*np.log10(mean_amplitude),
                   'incLocal': self.stack_data['incLocal']}
         for name, layer in layers.items():
             fig = plt.figure(figsize=(6, 5))
@@ -302,7 +361,9 @@ class GEOCODED_stack(INSAR4SM_stack):
         self.incLocal = self.stack_data['incLocal']
         self.hgt = self.stack_data['hgt']
         # pixels without data are zero in Topstack SLCs too; NaN would spoil the DS covariance
-        self.slc_stack = np.nan_to_num(self.stack_data['slc'][self.keep_bands])
+        with np.load(self.stack_file) as data:
+            self.slc_stack = np.nan_to_num(data['slc'][self.keep_bands], copy=False)
         self.amp_stack = np.abs(self.slc_stack)
         # geocoded SLCs are flattened with the DEM, so no baseline term is left to model
-        self.perp_baseline_stack = np.zeros(self.slc_stack.shape, dtype=np.float32)
+        # (None instead of a cube of zeros, which would double the memory sent to the workers)
+        self.perp_baseline_stack = None
